@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1f3a" />
+  <title>City Life Cars | Rental Management</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <section id="loginScreen" class="login-screen">
+    <div class="brand-panel">
+      <div class="logo-mark">CLC</div>
+      <h1>City Life Cars</h1>
+      <p>Rental Fleet Management System</p>
+      <div class="brand-points"><span>Fleet tracking</span><span>E-sign agreements</span><span>Inspections & payments</span></div>
+    </div>
+    <form id="loginForm" class="login-card">
+      <div><p class="eyebrow">Secure access</p><h2>Welcome back</h2><p class="muted">Sign in to manage your rental operation.</p></div>
+      <label>Email<input id="email" type="email" value="admin@citylifecars.com" required /></label>
+      <label>Password<input id="password" type="password" value="CityLife2026" required /></label>
+      <button type="submit" class="primary-btn">Sign In</button>
+      <p class="demo-note">Demo login: admin@citylifecars.com / CityLife2026</p><p id="loginError" class="error"></p>
+    </form>
+  </section>
+
+  <div id="app" class="app hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand"><div class="logo-mark small">CLC</div><div><strong>City Life Cars</strong><small>Rental Manager</small></div></div>
+      <nav id="nav">
+        <button class="nav-link active" data-view="dashboard">Dashboard</button><button class="nav-link" data-view="fleet">Fleet</button><button class="nav-link" data-view="rentals">Rentals</button><button class="nav-link" data-view="agreements">Agreements</button><button class="nav-link" data-view="customers">Customers</button><button class="nav-link" data-view="inspections">Inspections</button><button class="nav-link" data-view="payments">Payments</button><button class="nav-link" data-view="reminders">Reminders</button><button class="nav-link" data-view="maintenance">Maintenance</button><button class="nav-link" data-view="reports">Reports</button><button class="nav-link" data-view="settings">Settings & Backup</button>
+      </nav>
+      <button id="logoutBtn" class="logout-btn">Log Out</button>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><button id="menuBtn" class="menu-btn" aria-label="Open menu">☰</button><div><p class="eyebrow">Operations center</p><h2 id="pageTitle">Dashboard</h2></div><div class="profile"><div class="avatar">TL</div><span>Travis Luke</span></div></header>
+
+      <section id="dashboard" class="view active-view">
+        <div class="hero-card"><div><p class="eyebrow light">Today’s overview</p><h1>Run your rental fleet from one place.</h1><p>Monitor vehicles, agreements, renter documents, inspections, payments, returns, and maintenance.</p></div><button class="light-btn" onclick="openModal('rental')">+ New Rental</button></div>
+        <div id="securityNotice" class="notice"><strong>Local demo mode:</strong> Use sample/test information only until cloud authentication, encrypted storage, payment processing, and messaging are connected.</div>
+        <div class="stats-grid" id="statsGrid"></div><div class="grid-two"><div class="panel"><div class="panel-head"><h3>Vehicles due back</h3><button class="text-btn" data-jump="rentals">View rentals</button></div><div id="dueList"></div></div><div class="panel"><div class="panel-head"><h3>Fleet status</h3><button class="text-btn" data-jump="fleet">Manage fleet</button></div><div id="fleetStatus"></div></div></div>
+      </section>
+
+      <section id="fleet" class="view"><div class="section-head"><div><h2>Fleet</h2><p>Track status, mileage, daily rate, GPS links, and profitability.</p></div><button class="primary-btn" onclick="openModal('vehicle')">+ Add Vehicle</button></div><div class="panel table-wrap"><table><thead><tr><th>Vehicle</th><th>Plate</th><th>Mileage</th><th>Daily Rate</th><th>GPS</th><th>Status</th></tr></thead><tbody id="fleetTable"></tbody></table></div></section>
+
+      <section id="rentals" class="view"><div class="section-head"><div><h2>Rentals</h2><p>Late fees calculate automatically from the scheduled return date.</p></div><button class="primary-btn" onclick="openModal('rental')">+ New Rental</button></div><div class="panel table-wrap"><table><thead><tr><th>Customer</th><th>Vehicle</th><th>Pickup</th><th>Return</th><th>Late Fee</th><th>Balance</th><th>Status</th></tr></thead><tbody id="rentalsTable"></tbody></table></div></section>
+
+      <section id="agreements" class="view"><div class="section-head"><div><h2>Rental Agreements</h2><p>Create, sign, save, and print agreements.</p></div><button class="primary-btn" onclick="openAgreementModal()">+ Create Agreement</button></div><div id="agreementCards" class="cards-grid"></div></section>
+
+      <section id="customers" class="view"><div class="section-head"><div><h2>Customers</h2><p>Keep renter information and document status together.</p></div><button class="primary-btn" onclick="openModal('customer')">+ Add Customer</button></div><div id="customerCards" class="cards-grid"></div></section>
+
+      <section id="inspections" class="view"><div class="section-head"><div><h2>Vehicle Inspections</h2><p>Record checkout/return mileage, condition notes, and photos.</p></div><button class="primary-btn" onclick="openInspectionModal()">+ New Inspection</button></div><div id="inspectionCards" class="cards-grid"></div></section>
+
+      <section id="payments" class="view"><div class="section-head"><div><h2>Payments</h2><p>Track charges and use your configured hosted payment link.</p></div><div class="button-row"><button id="paymentLinkBtn" class="outline-btn">Open Payment Link</button><button class="primary-btn" onclick="openModal('payment')">+ Record Payment</button></div></div><div class="stats-grid" id="paymentStats"></div><div class="panel table-wrap"><table><thead><tr><th>Date</th><th>Customer</th><th>Type</th><th>Method</th><th>Amount</th><th>Status</th></tr></thead><tbody id="paymentsTable"></tbody></table></div></section>
+
+      <section id="reminders" class="view"><div class="section-head"><div><h2>Return Reminders</h2><p>Preview reminders due from your rental schedule.</p></div><button id="notificationBtn" class="primary-btn">Enable Browser Alerts</button></div><div class="notice"><strong>Production:</strong> Connect Twilio/email automation after hosting for reminders that send even when this app is closed.</div><div id="reminderList" class="cards-grid"></div></section>
+
+      <section id="maintenance" class="view"><div class="section-head"><div><h2>Maintenance</h2><p>Prevent missed oil changes, tire service, inspections, and repairs.</p></div><button class="primary-btn" onclick="openModal('service')">+ Add Service</button></div><div id="maintenanceList" class="cards-grid"></div></section>
+
+      <section id="reports" class="view"><div class="section-head"><div><h2>Reports</h2><p>Review revenue, balances, utilization, and vehicle performance.</p></div><button id="exportBtn" class="primary-btn">Export Fleet CSV</button></div><div class="stats-grid" id="reportStats"></div><div class="grid-two"><div class="panel"><h3>Revenue by vehicle</h3><div id="revenueBars" class="bars"></div></div><div class="panel"><h3>Business checklist</h3><ul class="checklist"><li>Review overdue rentals daily</li><li>Verify insurance before every pickup</li><li>Photograph vehicles at checkout and return</li><li>Reconcile deposits and balances weekly</li><li>Back up records frequently</li></ul></div></div></section>
+
+      <section id="settings" class="view"><div class="section-head"><div><h2>Settings & Backup</h2><p>Configure business rules and protect your local demo data.</p></div></div><div class="grid-two"><form id="settingsForm" class="panel settings-form"><h3>Business settings</h3><label>Default late fee / day<input id="defaultLateFee" type="number" min="0" step="1"></label><label>Hosted payment link<input id="paymentLink" type="url" placeholder="https://... (Stripe/Square hosted checkout)"></label><label>Reminder hours before return<input id="reminderHours" type="number" min="1" step="1"></label><button class="primary-btn" type="submit">Save Settings</button></form><div class="panel"><h3>Backup & Restore</h3><p class="muted">Download all app records as a JSON backup. Restore replaces the current local records.</p><div class="stack"><button id="backupBtn" class="primary-btn">Download Backup</button><label class="upload-btn">Restore Backup<input id="restoreInput" type="file" accept="application/json" hidden></label><button id="resetBtn" class="danger-btn">Reset Demo Data</button></div><hr><h3>Go-live connections</h3><div class="integration-list"><div><strong>Cloud database</strong><span>Not connected</span></div><div><strong>Secure ID/document storage</strong><span>Not connected</span></div><div><strong>Stripe/Square payments</strong><span>Hosted link ready</span></div><div><strong>SMS/email reminders</strong><span>Not connected</span></div><div><strong>Automatic cloud backup</strong><span>Not connected</span></div></div></div></div></section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden"><div class="modal-card"><button id="closeModal" class="close-btn">×</button><h2 id="modalTitle">Add Record</h2><form id="recordForm" class="form-grid"></form></div></div>
+
+  <div id="agreementModal" class="modal hidden"><div class="modal-card wide"><button class="close-btn" onclick="closeAgreementModal()">×</button><h2>Create Rental Agreement</h2><form id="agreementForm" class="form-grid"><label class="full">Rental<select id="agreementRental" required></select></label><label class="full">Agreement terms<textarea id="agreementTerms" rows="9" required></textarea></label><label>Renter initials<input id="agreementInitials" maxlength="4" required></label><label>Date signed<input id="agreementDate" type="date" required></label><div class="full"><label>Customer signature</label><canvas id="signaturePad" width="700" height="180"></canvas><div class="button-row"><button type="button" id="clearSignature" class="outline-btn">Clear Signature</button></div></div><button class="primary-btn" type="submit">Save Signed Agreement</button></form></div></div>
+
+  <div id="inspectionModal" class="modal hidden"><div class="modal-card"><button class="close-btn" onclick="closeInspectionModal()">×</button><h2>Vehicle Inspection</h2><form id="inspectionForm" class="form-grid"><label>Rental<select id="inspectionRental" required></select></label><label>Inspection type<select id="inspectionType"><option>Checkout</option><option>Return</option></select></label><label>Mileage<input id="inspectionMileage" type="number" required></label><label>Fuel level<select id="inspectionFuel"><option>Full</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Empty</option></select></label><label class="full">Condition / damage notes<textarea id="inspectionNotes" rows="4"></textarea></label><label class="full">Inspection photos<input id="inspectionPhotos" type="file" accept="image/*" multiple></label><p class="demo-note full">Local demo saves small compressed previews in this browser. Production should use encrypted cloud storage.</p><button class="primary-btn" type="submit">Save Inspection</button></form></div></div>
+
+  <div id="docModal" class="modal hidden"><div class="modal-card"><button class="close-btn" onclick="closeDocModal()">×</button><h2>Customer Documents</h2><form id="docForm" class="form-grid"><input id="docCustomerId" type="hidden"><label class="full">Driver's license image<input id="licenseFile" type="file" accept="image/*,application/pdf"></label><label class="full">Insurance image/PDF<input id="insuranceFile" type="file" accept="image/*,application/pdf"></label><p class="demo-note full">Use sample documents only in local demo mode.</p><button class="primary-btn" type="submit">Save Documents</button></form></div></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
