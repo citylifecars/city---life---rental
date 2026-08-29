@@ -1,38 +1,42 @@
-CITY LIFE CARS RENTAL MANAGEMENT SYSTEM — ENHANCED LOCAL PROTOTYPE
+CITY LIFE CARS RENTAL MANAGEMENT SYSTEM - SUPABASE CLOUD BUILD v3
 
-LOGIN
-Email: admin@citylifecars.com
-Password: CityLife2026
+WHAT THIS BUILD CONNECTS
+- Supabase email/password employee authentication
+- Employee role/profile verification
+- Vehicles cloud database
+- Customers cloud database
+- Rentals cloud database
+- Payments cloud database
+- Maintenance cloud database
+- Rental agreements + private signature storage
+- Customer driver-license / insurance private storage
+- Vehicle inspection records + private photo storage
+- Vercel build-time configuration from environment variables
 
-HOW TO OPEN
-1. Extract the ZIP file.
-2. Open the city-life-rental-system folder.
-3. Double-click index.html.
-4. Use Chrome or Edge for the best experience.
+BEFORE DEPLOYING
+1. In Supabase SQL Editor, open supabase-upgrade.sql, copy all of it, and Run it once.
+   Expected result: Success. No rows returned.
+2. In Vercel Production Environment Variables confirm BOTH exist:
+   NEXT_PUBLIC_SUPABASE_URL
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+3. Never add your Supabase secret/service_role key to browser code or GitHub.
 
-FEATURES INCLUDED IN THIS BUILD
-- Mobile-friendly branded dashboard
-- Vehicle/fleet tracking with GPS links
-- Rental records with automatic late-fee calculations
-- Rental agreement creation and electronic signature pad
-- Print/save agreement as PDF through your browser print dialog
-- Customer driver's-license and insurance file upload demo
-- Checkout/return inspections with condition notes and photos
-- Payment records plus configurable Stripe/Square hosted payment link
-- Return-reminder center and browser notifications
-- Maintenance tracking
-- Reports and CSV export
-- JSON backup and restore
+DEPLOY TO GITHUB / VERCEL
+1. Extract this ZIP.
+2. In the SAME GitHub repository Vercel already uses, replace the old website files with ALL files/folders from this package.
+3. Commit the changes to main.
+4. Vercel should automatically build and deploy.
+5. Vercel will run npm run build and publish the dist folder automatically using vercel.json.
+6. Open www.cityliferentalcars.com and sign in using the Supabase Owner email/password you created.
 
-IMPORTANT SECURITY / GO-LIVE NOTE
-This is a LOCAL PROTOTYPE. Data and uploaded documents are stored in the browser on the computer/device used. Do not store real driver's licenses, insurance documents, card numbers, Social Security numbers, or other sensitive customer data in this local prototype.
+IMPORTANT
+- The Publishable key is intended for browser use. Data access is enforced by the Row Level Security policies you already created.
+- Secret/service_role keys must stay private and are NOT used by this build.
+- Automatic SMS reminders are not connected yet; the Reminders screen is a preview/browser alert center.
+- Hosted payment links work from Settings. Direct Stripe/Square API processing is a separate integration.
+- Supabase automated backup capabilities depend on your Supabase plan/settings.
 
-For production use, connect:
-- Secure cloud authentication and employee roles
-- Encrypted database and document storage
-- Stripe or Square hosted payment processing (do not store card numbers yourself)
-- Twilio/SMS and/or email provider for automatic reminders
-- Automatic encrypted cloud backups
-- HTTPS hosting and a City Life Cars domain/subdomain
-
-The payment button is designed for a hosted checkout URL. Configure it under Settings & Backup.
+IF LOGIN SAYS CONFIGURATION IS MISSING
+- Check Vercel > Project > Settings > Environment Variables.
+- Make sure the two variables are in Production.
+- Redeploy after changing environment variables because config.js is generated at build time.

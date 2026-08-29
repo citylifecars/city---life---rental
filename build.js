@@ -1,0 +1,11 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+const dist = path.join(root, 'dist');
+fs.rmSync(dist, { recursive: true, force: true });
+fs.mkdirSync(dist, { recursive: true });
+for (const name of ['index.html','styles.css','app.js']) fs.copyFileSync(path.join(root,name), path.join(dist,name));
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+fs.writeFileSync(path.join(dist,'config.js'), `window.CLC_CONFIG=${JSON.stringify({supabaseUrl:url,supabasePublishableKey:key})};\n`);
+console.log('Built City Life Rental to dist/. Supabase URL configured:', Boolean(url), 'Publishable key configured:', Boolean(key));

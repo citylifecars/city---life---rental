@@ -1,85 +1,232 @@
-const seed={
-  vehicles:[
-    {id:1,year:2021,make:'Nissan',model:'Altima',plate:'CLC101',mileage:68420,rate:65,status:'Rented',revenue:6240,gps:'https://maps.google.com'},
-    {id:2,year:2020,make:'Toyota',model:'Camry',plate:'CLC202',mileage:75310,rate:70,status:'Available',revenue:7150,gps:''},
-    {id:3,year:2019,make:'Chevrolet',model:'Malibu',plate:'CLC303',mileage:89215,rate:60,status:'Service',revenue:4980,gps:''},
-    {id:4,year:2022,make:'Kia',model:'Forte',plate:'CLC404',mileage:52100,rate:68,status:'Rented',revenue:6820,gps:'https://maps.google.com'}],
-  customers:[
-    {id:1,name:'Jordan Mills',phone:'229-555-0148',email:'jordan@example.com',license:'GA •••• 9214',docs:{}},
-    {id:2,name:'Ashley Brown',phone:'229-555-0177',email:'ashley@example.com',license:'GA •••• 4450',docs:{}},
-    {id:3,name:'Marcus Green',phone:'229-555-0194',email:'marcus@example.com',license:'GA •••• 1832',docs:{}}],
-  rentals:[
-    {id:1,customer:'Jordan Mills',vehicle:'2021 Nissan Altima',pickup:'2026-08-04',return:'2026-08-07',balance:0,status:'Active',lateFeeDaily:35},
-    {id:2,customer:'Ashley Brown',vehicle:'2022 Kia Forte',pickup:'2026-08-01',return:'2026-08-05',balance:136,status:'Overdue',lateFeeDaily:35},
-    {id:3,customer:'Marcus Green',vehicle:'2020 Toyota Camry',pickup:'2026-08-09',return:'2026-08-12',balance:210,status:'Upcoming',lateFeeDaily:35}],
-  payments:[{date:'2026-08-04',customer:'Jordan Mills',type:'Rental',method:'Card',amount:195,status:'Paid'},{date:'2026-08-01',customer:'Ashley Brown',type:'Deposit',method:'Cash App',amount:200,status:'Paid'},{date:'2026-08-05',customer:'Ashley Brown',type:'Extension',method:'Pending',amount:136,status:'Pending'}],
-  maintenance:[{vehicle:'2019 Chevrolet Malibu',service:'Brake inspection',due:'Due now',status:'Due'},{vehicle:'2021 Nissan Altima',service:'Oil change',due:'1,580 miles',status:'Upcoming'},{vehicle:'2020 Toyota Camry',service:'Tire rotation',due:'3,200 miles',status:'Upcoming'}],
-  agreements:[], inspections:[],
-  settings:{defaultLateFee:35,paymentLink:'',reminderHours:24}
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const cfg = window.CLC_CONFIG || {};
+const settings = JSON.parse(localStorage.getItem('clcCloudSettings') || 'null') || { defaultLateFee: 35, paymentLink: '', reminderHours: 24 };
+let supabase = null;
+let currentUser = null;
+let currentProfile = null;
+let data = { vehicles: [], customers: [], rentals: [], payments: [], maintenance: [], agreements: [], inspections: [], documents: [] };
+
+const roleAccess = {
+  owner: ['dashboard','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
+  manager: ['dashboard','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
+  rental_agent: ['dashboard','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','settings'],
+  maintenance: ['dashboard','fleet','rentals','inspections','maintenance','settings']
 };
-let data=JSON.parse(localStorage.getItem('clcDataV2'))||JSON.parse(localStorage.getItem('clcData'))||structuredClone(seed);
-if(!data.agreements)data.agreements=[]; if(!data.inspections)data.inspections=[]; if(!data.settings)data.settings=structuredClone(seed.settings); data.customers.forEach(c=>c.docs=c.docs||{}); data.vehicles.forEach(v=>v.gps=v.gps||''); data.rentals.forEach(r=>r.lateFeeDaily=Number(r.lateFeeDaily||data.settings.defaultLateFee||35));
-const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
-function save(){localStorage.setItem('clcDataV2',JSON.stringify(data));renderAll()}
-$('#loginForm').addEventListener('submit',e=>{e.preventDefault();if($('#email').value==='admin@citylifecars.com'&&$('#password').value==='CityLife2026'){sessionStorage.setItem('clcAuth','1');showApp()}else $('#loginError').textContent='Incorrect email or password.'});
-function showApp(){$('#loginScreen').classList.add('hidden');$('#app').classList.remove('hidden');renderAll()}
-if(sessionStorage.getItem('clcAuth'))showApp(); $('#logoutBtn').onclick=()=>{sessionStorage.removeItem('clcAuth');location.reload()};
-$$('.nav-link').forEach(b=>b.onclick=()=>switchView(b.dataset.view));$$('[data-jump]').forEach(b=>b.onclick=()=>switchView(b.dataset.jump));
-function switchView(id){$$('.view').forEach(v=>v.classList.remove('active-view'));$('#'+id).classList.add('active-view');$$('.nav-link').forEach(n=>n.classList.toggle('active',n.dataset.view===id));$('#pageTitle').textContent=id==='settings'?'Settings & Backup':id[0].toUpperCase()+id.slice(1);$('#sidebar').classList.remove('open')}
-$('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open'); const badge=s=>`<span class="badge ${String(s).toLowerCase()}">${s}</span>`;
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-function daysLate(r){if(r.status==='Completed')return 0;const now=new Date();now.setHours(0,0,0,0);const due=new Date(r.return+'T00:00:00');return Math.max(0,Math.floor((now-due)/86400000))}
-function lateFee(r){return daysLate(r)*Number(r.lateFeeDaily||data.settings.defaultLateFee||0)}
-function autoRentalStatus(r){const late=daysLate(r);if(r.status!=='Completed'&&late>0)r.status='Overdue';return r.status}
-function renderAll(){data.rentals.forEach(autoRentalStatus); const active=data.rentals.filter(r=>['Active','Overdue'].includes(r.status)).length,available=data.vehicles.filter(v=>v.status==='Available').length,overdue=data.rentals.filter(r=>r.status==='Overdue').length,revenue=data.payments.filter(p=>p.status==='Paid').reduce((a,p)=>a+Number(p.amount),0);
-  $('#statsGrid').innerHTML=[[available,'Vehicles Available','Ready to rent'],[active,'Active Rentals','Currently on the road'],[overdue,'Overdue Returns','Needs attention'],['$'+revenue.toLocaleString(),'Revenue Recorded','Current records']].map(x=>`<div class="stat-card"><small>${x[1]}</small><strong>${x[0]}</strong><div class="trend">${x[2]}</div></div>`).join('');
-  $('#dueList').innerHTML=data.rentals.filter(r=>r.status!=='Completed').map(r=>`<div class="due-row"><div><strong>${esc(r.customer)}</strong><div class="muted">${esc(r.vehicle)} • Return ${r.return}${daysLate(r)?` • ${daysLate(r)} day(s) late`:''}</div></div>${badge(r.status)}</div>`).join('')||'<p class="muted">No open rentals.</p>';
-  $('#fleetStatus').innerHTML=['Available','Rented','Service'].map(s=>`<div class="status-row"><span>${s}</span><strong>${data.vehicles.filter(v=>v.status===s).length}</strong></div>`).join('');
-  $('#fleetTable').innerHTML=data.vehicles.map(v=>`<tr><td><strong>${v.year} ${esc(v.make)} ${esc(v.model)}</strong></td><td>${esc(v.plate)}</td><td>${Number(v.mileage).toLocaleString()}</td><td>$${v.rate}</td><td>${v.gps?`<a href="${esc(v.gps)}" target="_blank" rel="noopener">Open GPS</a>`:'—'}</td><td>${badge(v.status)}</td></tr>`).join('');
-  $('#rentalsTable').innerHTML=data.rentals.map(r=>`<tr class="${r.status==='Overdue'?'overdue-row':''}"><td><strong>${esc(r.customer)}</strong></td><td>${esc(r.vehicle)}</td><td>${r.pickup}</td><td>${r.return}</td><td>$${lateFee(r).toFixed(2)}</td><td>$${(Number(r.balance)+lateFee(r)).toFixed(2)}</td><td>${badge(r.status)}</td></tr>`).join('');
-  $('#customerCards').innerHTML=data.customers.map(c=>`<article class="customer-card"><h3>${esc(c.name)}</h3><p>${esc(c.phone)}</p><p>${esc(c.email)}</p><p>${esc(c.license)}</p><div class="doc-status"><span class="mini-pill">License: ${c.docs.license?'✓':'Missing'}</span><span class="mini-pill">Insurance: ${c.docs.insurance?'✓':'Missing'}</span></div><button class="outline-btn" onclick="openDocModal(${c.id})">Documents</button></article>`).join('');
-  const paid=data.payments.filter(p=>p.status==='Paid').reduce((a,p)=>a+Number(p.amount),0),pending=data.payments.filter(p=>p.status==='Pending').reduce((a,p)=>a+Number(p.amount),0);$('#paymentStats').innerHTML=[[`$${paid.toFixed(2)}`,'Payments Collected'],[`$${pending.toFixed(2)}`,'Pending Payments'],[data.payments.length,'Transactions'],['Hosted','Card Processing']].map(x=>`<div class="stat-card"><small>${x[1]}</small><strong>${x[0]}</strong></div>`).join('');
-  $('#paymentsTable').innerHTML=data.payments.map(p=>`<tr><td>${p.date}</td><td>${esc(p.customer)}</td><td>${esc(p.type)}</td><td>${esc(p.method)}</td><td>$${Number(p.amount).toFixed(2)}</td><td>${badge(p.status)}</td></tr>`).join('');
-  $('#maintenanceList').innerHTML=data.maintenance.map(m=>`<article class="maintenance-card"><h3>${esc(m.vehicle)}</h3><p>${esc(m.service)}</p><p><strong>${esc(m.due)}</strong></p>${badge(m.status==='Due'?'Due':'Service')}</article>`).join('');
-  const totalRev=data.vehicles.reduce((a,v)=>a+Number(v.revenue||0),0);$('#reportStats').innerHTML=[[`$${totalRev.toLocaleString()}`,'Lifetime Vehicle Revenue'],[`${data.vehicles.length?Math.round(active/data.vehicles.length*100):0}%`,'Fleet Utilization'],[`$${data.rentals.reduce((a,r)=>a+Number(r.balance)+lateFee(r),0).toFixed(2)}`,'Outstanding + Late Fees'],['$'+Math.round(totalRev/Math.max(1,data.vehicles.length)).toLocaleString(),'Average per Vehicle']].map(x=>`<div class="stat-card"><small>${x[1]}</small><strong>${x[0]}</strong></div>`).join('');
-  const max=Math.max(1,...data.vehicles.map(v=>Number(v.revenue||0)));$('#revenueBars').innerHTML=data.vehicles.map(v=>`<div class="bar-row"><span>${esc(v.make)} ${esc(v.model)}</span><div class="bar-track"><div class="bar-fill" style="width:${Number(v.revenue||0)/max*100}%"></div></div><strong>$${Number(v.revenue||0)}</strong></div>`).join('');
-  renderAgreements();renderInspections();renderReminders();renderSettings();
+
+function esc(s){return String(s ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function badge(s){return `<span class="badge ${String(s).toLowerCase().replace(/\s+/g,'-')}">${esc(s)}</span>`;}
+function dateOnly(v){return v ? new Date(v).toLocaleDateString() : '—';}
+function money(v){return `$${Number(v || 0).toFixed(2)}`;}
+function uiVehicleStatus(s){return ({available:'Available',reserved:'Reserved',rented:'Rented',maintenance:'Service',sold:'Sold'})[s] || s || 'Available';}
+function dbVehicleStatus(s){return ({Available:'available',Reserved:'reserved',Rented:'rented',Service:'maintenance',Sold:'sold'})[s] || String(s).toLowerCase();}
+function uiRentalStatus(s){return ({reserved:'Upcoming',active:'Active',overdue:'Overdue',completed:'Completed',cancelled:'Cancelled'})[s] || s || 'Upcoming';}
+function dbRentalStatus(s){return ({Upcoming:'reserved',Active:'active',Overdue:'overdue',Completed:'completed',Cancelled:'cancelled'})[s] || String(s).toLowerCase();}
+function fullName(c){return [c?.first_name,c?.last_name].filter(Boolean).join(' ') || 'Unknown customer';}
+function vehicleName(v){return v ? `${v.year || ''} ${v.make || ''} ${v.model || ''}`.replace(/\s+/g,' ').trim() : 'Unknown vehicle';}
+function initials(name){return String(name||'CL').split(/\s+/).map(x=>x[0]).join('').slice(0,2).toUpperCase();}
+function maskLicense(v){if(!v) return 'License not entered'; const s=String(v); return `•••• ${s.slice(-4)}`;}
+function can(...roles){return roles.includes(currentProfile?.role);}
+function showError(err, prefix=''){console.error(err); alert(`${prefix}${err?.message || err || 'Unknown error'}`);}
+
+async function init(){
+  if(!cfg.supabaseUrl || !cfg.supabasePublishableKey){
+    $('#configError').textContent='Supabase configuration is missing. Confirm the two Vercel Production environment variables and redeploy.';
+    $('#loginBtn').disabled=true;
+    return;
+  }
+  supabase = createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+  bindUi();
+  const { data: { session } } = await supabase.auth.getSession();
+  if(session) await enterApp(session.user);
+  supabase.auth.onAuthStateChange(async (event, session)=>{
+    if(event==='SIGNED_OUT'){currentUser=null;currentProfile=null;showLogin();}
+    if(event==='SIGNED_IN' && session?.user && !currentUser) await enterApp(session.user);
+  });
 }
-const forms={
- vehicle:{title:'Add Vehicle',fields:[['year','Year','number'],['make','Make','text'],['model','Model','text'],['plate','License Plate','text'],['mileage','Mileage','number'],['rate','Daily Rate','number'],['gps','GPS Tracking Link','url',null,false],['status','Status','select',['Available','Rented','Service']]]},
- customer:{title:'Add Customer',fields:[['name','Full Name','text'],['phone','Phone','tel'],['email','Email','email'],['license','License Number','text']]},
- payment:{title:'Record Payment',fields:[['date','Date','date'],['customer','Customer','text'],['type','Payment Type','text'],['method','Method','select',['Card - Hosted Checkout','Cash','Cash App','Zelle','Apple Pay']],['amount','Amount','number'],['status','Status','select',['Paid','Pending']]]},
- service:{title:'Add Maintenance',fields:[['vehicle','Vehicle','text'],['service','Service Needed','text'],['due','Due Date or Mileage','text'],['status','Status','select',['Due','Upcoming']]]},
- rental:{title:'Create Rental',fields:[['customer','Customer','text'],['vehicle','Vehicle','text'],['pickup','Pickup Date','date'],['return','Return Date','date'],['balance','Base Balance Due','number'],['lateFeeDaily','Late Fee / Day','number'],['status','Status','select',['Active','Upcoming','Overdue','Completed']]]}
+
+function bindUi(){
+  $('#loginForm').addEventListener('submit', async e=>{
+    e.preventDefault(); $('#loginError').textContent=''; $('#loginBtn').disabled=true; $('#loginBtn').textContent='Signing in…';
+    const {data:authData,error}=await supabase.auth.signInWithPassword({email:$('#email').value.trim(),password:$('#password').value});
+    $('#loginBtn').disabled=false; $('#loginBtn').textContent='Sign In';
+    if(error){$('#loginError').textContent=error.message;return;}
+    await enterApp(authData.user);
+  });
+  $('#logoutBtn').onclick=()=>supabase.auth.signOut();
+  $$('.nav-link').forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+  $$('[data-jump]').forEach(b=>b.onclick=()=>switchView(b.dataset.jump));
+  $('#menuBtn').onclick=()=>$('#sidebar').classList.toggle('open');
+  $('#closeModal').onclick=()=>$('#modal').classList.add('hidden');
+  $('#settingsForm').onsubmit=e=>{e.preventDefault();settings.defaultLateFee=Number($('#defaultLateFee').value);settings.paymentLink=$('#paymentLink').value.trim();settings.reminderHours=Number($('#reminderHours').value);localStorage.setItem('clcCloudSettings',JSON.stringify(settings));renderSettings();alert('Settings saved on this browser.');};
+  $('#paymentLinkBtn').onclick=()=>{if(!settings.paymentLink){switchView('settings');alert('Add a Stripe or Square hosted payment link first.');return;} window.open(settings.paymentLink,'_blank','noopener');};
+  $('#notificationBtn').onclick=async()=>{if(!('Notification' in window))return alert('This browser does not support notifications.');const p=await Notification.requestPermission();if(p==='granted')new Notification('City Life Cars',{body:'Browser return alerts are enabled while this site is open.'});};
+  $('#exportBtn').onclick=exportFleet;
+  $('#clearSignature').onclick=clearCanvas;
+  setupSignaturePad();
+  $('#agreementForm').onsubmit=saveAgreement;
+  $('#inspectionForm').onsubmit=saveInspection;
+  $('#docForm').onsubmit=saveDocuments;
+}
+
+async function enterApp(user){
+  currentUser=user;
+  const {data:profile,error}=await supabase.from('employee_profiles').select('id,full_name,phone,role,active').eq('id',user.id).single();
+  if(error || !profile){await supabase.auth.signOut();$('#loginError').textContent='Your login exists, but no employee profile was found. Ask the Owner to add your employee profile.';return;}
+  if(!profile.active){await supabase.auth.signOut();$('#loginError').textContent='This employee account is inactive.';return;}
+  currentProfile=profile;
+  $('#profileName').textContent=profile.full_name || user.email;
+  $('#profileAvatar').textContent=initials(profile.full_name);
+  $('#roleLabel').textContent=profile.role.replace('_',' ');
+  applyRoleUi();
+  $('#loginScreen').classList.add('hidden'); $('#app').classList.remove('hidden');
+  await loadAll();
+}
+
+function showLogin(){
+  $('#app').classList.add('hidden'); $('#loginScreen').classList.remove('hidden');
+  $('#password').value='';
+}
+
+function applyRoleUi(){
+  const allowed=roleAccess[currentProfile.role]||[];
+  $$('.nav-link').forEach(b=>b.hidden=!allowed.includes(b.dataset.view));
+  $$('.action-fleet-add').forEach(x=>x.hidden=!can('owner','manager'));
+  $$('.action-rental').forEach(x=>x.hidden=!can('owner','manager','rental_agent'));
+  $$('.action-customer').forEach(x=>x.hidden=!can('owner','manager','rental_agent'));
+  $$('.action-payment').forEach(x=>x.hidden=!can('owner','manager','rental_agent'));
+  $$('.action-inspection').forEach(x=>x.hidden=!can('owner','manager','rental_agent','maintenance'));
+  $$('.action-maintenance').forEach(x=>x.hidden=!can('owner','manager','maintenance'));
+}
+
+function switchView(id){
+  if(!(roleAccess[currentProfile?.role]||[]).includes(id)) return;
+  $$('.view').forEach(v=>v.classList.remove('active-view')); $('#'+id).classList.add('active-view');
+  $$('.nav-link').forEach(n=>n.classList.toggle('active',n.dataset.view===id));
+  $('#pageTitle').textContent=id[0].toUpperCase()+id.slice(1); $('#sidebar').classList.remove('open');
+}
+
+async function loadAll(){
+  const [vehicles,customers,rentals,payments,maintenance,agreements,inspections,documents] = await Promise.all([
+    supabase.from('vehicles').select('*').order('created_at',{ascending:false}),
+    can('owner','manager','rental_agent') ? supabase.from('customers').select('*').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
+    supabase.from('rentals').select('*, customers(id,first_name,last_name), vehicles(id,year,make,model)').order('pickup_at',{ascending:false}),
+    can('owner','manager','rental_agent') ? supabase.from('payments').select('*, rentals(id,customers(first_name,last_name))').order('paid_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
+    supabase.from('maintenance_records').select('*, vehicles(id,year,make,model)').order('service_date',{ascending:false}),
+    can('owner','manager','rental_agent') ? supabase.from('rental_agreements').select('*, rentals(id,customers(first_name,last_name),vehicles(year,make,model),pickup_at,due_at)').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
+    supabase.from('vehicle_inspections').select('*, rentals(id,customers(first_name,last_name),vehicles(year,make,model))').order('created_at',{ascending:false}),
+    can('owner','manager','rental_agent') ? supabase.from('customer_documents').select('*').order('uploaded_at',{ascending:false}) : Promise.resolve({data:[],error:null})
+  ]);
+  const results=[vehicles,customers,rentals,payments,maintenance,agreements,inspections,documents];
+  const failed=results.find(r=>r.error); if(failed?.error){showError(failed.error,'Could not load cloud data: ');return;}
+  data={vehicles:vehicles.data||[],customers:customers.data||[],rentals:rentals.data||[],payments:payments.data||[],maintenance:maintenance.data||[],agreements:agreements.data||[],inspections:inspections.data||[],documents:documents.data||[]};
+  await updateOverdueStatuses();
+  renderAll();
+}
+
+async function updateOverdueStatuses(){
+  if(!can('owner','manager','rental_agent')) return;
+  const now=Date.now(); const overdue=data.rentals.filter(r=>['reserved','active'].includes(r.status) && new Date(r.due_at).getTime()<now);
+  if(!overdue.length)return;
+  await Promise.all(overdue.map(r=>supabase.from('rentals').update({status:'overdue'}).eq('id',r.id)));
+  overdue.forEach(r=>r.status='overdue');
+}
+
+function daysLate(r){if(r.status==='completed')return 0; const diff=Date.now()-new Date(r.due_at).getTime();return Math.max(0,Math.ceil(diff/86400000));}
+function lateFee(r){return Number(r.late_fee_total || 0) || daysLate(r)*Number(r.late_fee_per_day || settings.defaultLateFee || 0);}
+function rentalCustomer(r){return fullName(r.customers);}
+function rentalVehicle(r){return vehicleName(r.vehicles);}
+
+function renderAll(){
+  const active=data.rentals.filter(r=>['active','overdue'].includes(r.status)).length;
+  const available=data.vehicles.filter(v=>v.status==='available').length;
+  const overdue=data.rentals.filter(r=>r.status==='overdue').length;
+  const revenue=data.payments.filter(p=>p.status==='paid').reduce((a,p)=>a+Number(p.amount),0);
+  $('#statsGrid').innerHTML=[[available,'Vehicles Available','Ready to rent'],[active,'Active Rentals','Currently on the road'],[overdue,'Overdue Returns','Needs attention'],[money(revenue),'Revenue Recorded','Cloud payments']].map(x=>`<div class="stat-card"><small>${x[1]}</small><strong>${x[0]}</strong><div class="trend">${x[2]}</div></div>`).join('');
+  $('#dueList').innerHTML=data.rentals.filter(r=>r.status!=='completed'&&r.status!=='cancelled').map(r=>`<div class="due-row"><div><strong>${esc(rentalCustomer(r))}</strong><div class="muted">${esc(rentalVehicle(r))} • Return ${dateOnly(r.due_at)}${daysLate(r)?` • ${daysLate(r)} day(s) late`:''}</div></div>${badge(uiRentalStatus(r.status))}</div>`).join('')||'<p class="muted">No open rentals.</p>';
+  $('#fleetStatus').innerHTML=['available','rented','maintenance'].map(s=>`<div class="status-row"><span>${uiVehicleStatus(s)}</span><strong>${data.vehicles.filter(v=>v.status===s).length}</strong></div>`).join('');
+  $('#fleetTable').innerHTML=data.vehicles.map(v=>`<tr><td><strong>${esc(vehicleName(v))}</strong></td><td>${esc(v.license_plate||'—')}</td><td>${Number(v.mileage||0).toLocaleString()}</td><td>${money(v.daily_rate)}</td><td>${v.gps_url?`<a href="${esc(v.gps_url)}" target="_blank" rel="noopener">Open GPS</a>`:'—'}</td><td>${badge(uiVehicleStatus(v.status))}</td></tr>`).join('');
+  $('#rentalsTable').innerHTML=data.rentals.map(r=>`<tr class="${r.status==='overdue'?'overdue-row':''}"><td><strong>${esc(rentalCustomer(r))}</strong></td><td>${esc(rentalVehicle(r))}</td><td>${dateOnly(r.pickup_at)}</td><td>${dateOnly(r.due_at)}</td><td>${money(lateFee(r))}</td><td>${money(Number(r.balance_due||0)+lateFee(r))}</td><td>${badge(uiRentalStatus(r.status))}</td></tr>`).join('');
+  renderCustomers(); renderPayments(); renderMaintenance(); renderAgreements(); renderInspections(); renderReminders(); renderReports(); renderSettings();
+}
+
+function renderCustomers(){
+  if(!can('owner','manager','rental_agent')){$('#customerCards').innerHTML='<p class="muted">Your role does not include customer records.</p>';return;}
+  $('#customerCards').innerHTML=data.customers.map(c=>{const docs=data.documents.filter(d=>d.customer_id===c.id);const hasL=docs.some(d=>d.document_type==='drivers_license'),hasI=docs.some(d=>d.document_type==='insurance');return `<article class="customer-card"><h3>${esc(fullName(c))}</h3><p>${esc(c.phone||'')}</p><p>${esc(c.email||'')}</p><p>${esc(maskLicense(c.drivers_license_number))}</p><div class="doc-status"><span class="mini-pill">License: ${hasL?'✓':'Missing'}</span><span class="mini-pill">Insurance: ${hasI?'✓':'Missing'}</span></div><button class="outline-btn" onclick="openDocModal('${c.id}')">Documents</button></article>`;}).join('')||'<p class="muted">No customers yet.</p>';
+}
+
+function renderPayments(){
+  if(!can('owner','manager','rental_agent'))return;
+  const paid=data.payments.filter(p=>p.status==='paid').reduce((a,p)=>a+Number(p.amount),0),pending=data.payments.filter(p=>p.status==='pending').reduce((a,p)=>a+Number(p.amount),0);
+  $('#paymentStats').innerHTML=[[money(paid),'Payments Collected'],[money(pending),'Pending Payments'],[data.payments.length,'Transactions'],['Hosted','Card Processing']].map(x=>`<div class="stat-card"><small>${x[1]}</small><strong>${x[0]}</strong></div>`).join('');
+  $('#paymentsTable').innerHTML=data.payments.map(p=>`<tr><td>${dateOnly(p.paid_at)}</td><td>${esc(fullName(p.rentals?.customers))}</td><td>${esc(p.payment_type||'rental')}</td><td>${esc(p.payment_method||'')}</td><td>${money(p.amount)}</td><td>${badge(p.status||'pending')}</td></tr>`).join('');
+}
+
+function renderMaintenance(){
+  $('#maintenanceList').innerHTML=data.maintenance.map(m=>`<article class="maintenance-card"><h3>${esc(vehicleName(m.vehicles))}</h3><p>${esc(m.service_type)}</p><p><strong>${dateOnly(m.service_date)}</strong></p><p>${m.next_service_date?`Next: ${dateOnly(m.next_service_date)}`:''}${m.next_service_mileage?` • ${Number(m.next_service_mileage).toLocaleString()} mi`:''}</p>${badge(m.next_service_date && new Date(m.next_service_date)<new Date()?'Due':'Service')}</article>`).join('')||'<p class="muted">No maintenance records.</p>';
+}
+
+function renderReports(){
+  const paid=data.payments.filter(p=>p.status==='paid').reduce((a,p)=>a+Number(p.amount),0),active=data.rentals.filter(r=>['active','overdue'].includes(r.status)).length,outstanding=data.rentals.reduce((a,r)=>a+Number(r.balance_due||0)+lateFee(r),0);
+  $('#reportStats').innerHTML=[[money(paid),'Recorded Revenue'],[`${data.vehicles.length?Math.round(active/data.vehicles.length*100):0}%`,'Fleet Utilization'],[money(outstanding),'Outstanding + Late Fees'],[data.vehicles.length,'Vehicles']].map(x=>`<div class="stat-card"><small>${x[1]}</small><strong>${x[0]}</strong></div>`).join('');
+  const revByVehicle={}; data.payments.filter(p=>p.status==='paid').forEach(p=>{const r=data.rentals.find(x=>x.id===p.rental_id);if(r)revByVehicle[r.vehicle_id]=(revByVehicle[r.vehicle_id]||0)+Number(p.amount);});
+  const max=Math.max(1,...Object.values(revByVehicle)); $('#revenueBars').innerHTML=data.vehicles.map(v=>{const rev=revByVehicle[v.id]||0;return `<div class="bar-row"><span>${esc(v.make)} ${esc(v.model)}</span><div class="bar-track"><div class="bar-fill" style="width:${rev/max*100}%"></div></div><strong>${money(rev)}</strong></div>`;}).join('');
+}
+
+const modalForms={
+  vehicle:{title:'Add Vehicle'}, customer:{title:'Add Customer'}, rental:{title:'Create Rental'}, payment:{title:'Record Payment'}, service:{title:'Add Maintenance'}
 };
-window.openModal=type=>{const cfg=forms[type];$('#modalTitle').textContent=cfg.title;$('#recordForm').dataset.type=type;$('#recordForm').innerHTML=cfg.fields.map(f=>f[2]==='select'?`<label>${f[1]}<select name="${f[0]}" required>${f[3].map(o=>`<option>${o}</option>`).join('')}</select></label>`:`<label>${f[1]}<input name="${f[0]}" type="${f[2]}" ${f[4]===false?'':'required'} ${f[0]==='lateFeeDaily'?`value="${data.settings.defaultLateFee}"`:''}></label>`).join('')+`<button class="primary-btn" type="submit">Save Record</button>`;$('#modal').classList.remove('hidden')};
-$('#closeModal').onclick=()=>$('#modal').classList.add('hidden');$('#recordForm').onsubmit=e=>{e.preventDefault();const type=e.currentTarget.dataset.type,obj=Object.fromEntries(new FormData(e.currentTarget));['year','mileage','rate','amount','balance','lateFeeDaily'].forEach(k=>{if(obj[k]!==undefined)obj[k]=Number(obj[k])});if(type==='vehicle'){obj.id=Date.now();obj.revenue=0;data.vehicles.push(obj)}else if(type==='customer'){obj.id=Date.now();obj.docs={};data.customers.push(obj)}else if(type==='rental'){obj.id=Date.now();data.rentals.push(obj)}else if(type==='payment')data.payments.push(obj);else data.maintenance.push(obj);save();$('#modal').classList.add('hidden')};
+window.openModal=(type)=>{
+  $('#modalTitle').textContent=modalForms[type].title; $('#recordForm').dataset.type=type;
+  if(type==='vehicle') $('#recordForm').innerHTML=`<label>Year<input name="year" type="number"></label><label>Make<input name="make" required></label><label>Model<input name="model" required></label><label>VIN<input name="vin" required></label><label>License Plate<input name="license_plate"></label><label>Mileage<input name="mileage" type="number" value="0"></label><label>Daily Rate<input name="daily_rate" type="number" step="0.01" value="0"></label><label>GPS Link<input name="gps_url" type="url"></label><label>Status<select name="status"><option>Available</option><option>Reserved</option><option>Rented</option><option>Service</option><option>Sold</option></select></label><button class="primary-btn" type="submit">Save Vehicle</button>`;
+  if(type==='customer') $('#recordForm').innerHTML=`<label>First Name<input name="first_name" required></label><label>Last Name<input name="last_name" required></label><label>Phone<input name="phone" type="tel"></label><label>Email<input name="email" type="email"></label><label>Driver's License Number<input name="drivers_license_number"></label><label>License State<input name="drivers_license_state"></label><label>License Expiration<input name="drivers_license_expiration" type="date"></label><label>Insurance Company<input name="insurance_company"></label><label>Policy Number<input name="insurance_policy_number"></label><label>Insurance Expiration<input name="insurance_expiration" type="date"></label><button class="primary-btn" type="submit">Save Customer</button>`;
+  if(type==='rental') $('#recordForm').innerHTML=`<label>Customer<select name="customer_id" required>${data.customers.map(c=>`<option value="${c.id}">${esc(fullName(c))}</option>`).join('')}</select></label><label>Vehicle<select name="vehicle_id" required>${data.vehicles.filter(v=>['available','reserved'].includes(v.status)).map(v=>`<option value="${v.id}">${esc(vehicleName(v))}</option>`).join('')}</select></label><label>Pickup<input name="pickup_at" type="datetime-local" required></label><label>Due Return<input name="due_at" type="datetime-local" required></label><label>Daily Rate<input name="daily_rate" type="number" step="0.01" value="0"></label><label>Security Deposit<input name="security_deposit" type="number" step="0.01" value="0"></label><label>Late Fee / Day<input name="late_fee_per_day" type="number" step="0.01" value="${settings.defaultLateFee}"></label><label>Balance Due<input name="balance_due" type="number" step="0.01" value="0"></label><label>Status<select name="status"><option>Upcoming</option><option>Active</option><option>Overdue</option><option>Completed</option><option>Cancelled</option></select></label><button class="primary-btn" type="submit">Save Rental</button>`;
+  if(type==='payment') $('#recordForm').innerHTML=`<label class="full">Rental<select name="rental_id" required>${data.rentals.map(r=>`<option value="${r.id}">${esc(rentalCustomer(r))} — ${esc(rentalVehicle(r))}</option>`).join('')}</select></label><label>Amount<input name="amount" type="number" step="0.01" required></label><label>Type<select name="payment_type"><option value="rental">Rental</option><option value="deposit">Deposit</option><option value="late_fee">Late Fee</option><option value="damage">Damage</option><option value="other">Other</option></select></label><label>Method<select name="payment_method"><option>Cash</option><option>Card - Hosted Checkout</option><option>Cash App</option><option>Zelle</option><option>Apple Pay</option></select></label><label>Status<select name="status"><option value="paid">Paid</option><option value="pending">Pending</option></select></label><button class="primary-btn" type="submit">Record Payment</button>`;
+  if(type==='service') $('#recordForm').innerHTML=`<label class="full">Vehicle<select name="vehicle_id" required>${data.vehicles.map(v=>`<option value="${v.id}">${esc(vehicleName(v))}</option>`).join('')}</select></label><label>Service Type<input name="service_type" required></label><label>Service Date<input name="service_date" type="date" required></label><label>Mileage<input name="mileage" type="number"></label><label>Cost<input name="cost" type="number" step="0.01"></label><label>Vendor<input name="vendor"></label><label>Next Service Date<input name="next_service_date" type="date"></label><label>Next Service Mileage<input name="next_service_mileage" type="number"></label><label class="full">Notes<textarea name="notes"></textarea></label><button class="primary-btn" type="submit">Save Service</button>`;
+  $('#modal').classList.remove('hidden');
+};
 
-function renderAgreements(){$('#agreementCards').innerHTML=data.agreements.length?data.agreements.map(a=>`<article class="customer-card"><h3>${esc(a.customer)}</h3><p>${esc(a.vehicle)}</p><p>Signed ${a.date}</p><p>Initials: ${esc(a.initials)}</p><div class="agreement-actions"><button class="outline-btn" onclick="printAgreement(${a.id})">Print / PDF</button></div></article>`).join(''):'<p class="muted">No signed agreements yet.</p>'}
-window.openAgreementModal=()=>{const options=data.rentals.map(r=>`<option value="${r.id}">${esc(r.customer)} — ${esc(r.vehicle)} (${r.pickup} to ${r.return})</option>`).join('');if(!options){alert('Create a rental first.');return}$('#agreementRental').innerHTML=options;$('#agreementTerms').value=`CITY LIFE CARS RENTAL AGREEMENT\n\nThe renter agrees to return the vehicle by the scheduled return date and time, in substantially the same condition, subject to normal wear. The renter is responsible for authorized charges, fuel, tolls, parking/traffic violations, damage not covered by applicable insurance, and late fees described in the rental record. No unauthorized driver may operate the vehicle. The renter agrees to notify City Life Cars promptly of accidents, theft, mechanical problems, or any change affecting the rental.\n\nThis electronic signature confirms the renter reviewed and accepted these terms.`;$('#agreementDate').value=new Date().toISOString().slice(0,10);$('#agreementModal').classList.remove('hidden');clearCanvas()};
+$('#recordForm').onsubmit=async e=>{
+  e.preventDefault(); const type=e.currentTarget.dataset.type; const obj=Object.fromEntries(new FormData(e.currentTarget)); let q;
+  try{
+    if(type==='vehicle'){obj.year=obj.year?Number(obj.year):null;obj.mileage=Number(obj.mileage||0);obj.daily_rate=Number(obj.daily_rate||0);obj.status=dbVehicleStatus(obj.status);q=await supabase.from('vehicles').insert(obj);}
+    if(type==='customer'){for(const k of ['drivers_license_expiration','insurance_expiration'])if(!obj[k])obj[k]=null;q=await supabase.from('customers').insert(obj);}
+    if(type==='rental'){obj.daily_rate=Number(obj.daily_rate||0);obj.security_deposit=Number(obj.security_deposit||0);obj.late_fee_per_day=Number(obj.late_fee_per_day||0);obj.balance_due=Number(obj.balance_due||0);obj.status=dbRentalStatus(obj.status);obj.created_by=currentUser.id;q=await supabase.from('rentals').insert(obj); if(!q.error && ['active','overdue'].includes(obj.status)) await supabase.from('vehicles').update({status:'rented'}).eq('id',obj.vehicle_id);}
+    if(type==='payment'){obj.amount=Number(obj.amount);obj.payment_type=obj.payment_type||'rental';obj.payment_processor=obj.payment_method.includes('Hosted')?'hosted_link':null;q=await supabase.from('payments').insert(obj);}
+    if(type==='service'){obj.mileage=obj.mileage?Number(obj.mileage):null;obj.cost=Number(obj.cost||0);obj.next_service_mileage=obj.next_service_mileage?Number(obj.next_service_mileage):null;if(!obj.next_service_date)obj.next_service_date=null;q=await supabase.from('maintenance_records').insert(obj);}
+    if(q?.error) throw q.error; $('#modal').classList.add('hidden'); e.target.reset(); await loadAll();
+  }catch(err){showError(err,'Could not save record: ');}
+};
+
+function renderAgreements(){
+  if(!can('owner','manager','rental_agent'))return;
+  $('#agreementCards').innerHTML=data.agreements.map(a=>`<article class="customer-card"><h3>${esc(fullName(a.rentals?.customers))}</h3><p>${esc(vehicleName(a.rentals?.vehicles))}</p><p>Signed ${dateOnly(a.signed_at)}</p><p>Initials: ${esc(a.renter_initials||'—')}</p><div class="agreement-actions"><button class="outline-btn" onclick="viewSignature('${a.customer_signature_path||''}')">View Signature</button></div></article>`).join('')||'<p class="muted">No signed agreements yet.</p>';
+}
+window.openAgreementModal=()=>{if(!data.rentals.length)return alert('Create a rental first.');$('#agreementRental').innerHTML=data.rentals.map(r=>`<option value="${r.id}">${esc(rentalCustomer(r))} — ${esc(rentalVehicle(r))}</option>`).join('');$('#agreementTerms').value=`CITY LIFE CARS RENTAL AGREEMENT\n\nThe renter agrees to return the vehicle by the scheduled return date and time, in substantially the same condition, subject to normal wear. The renter is responsible for authorized charges, fuel, tolls, parking/traffic violations, damage not covered by applicable insurance, and late fees described in the rental record. No unauthorized driver may operate the vehicle. The renter agrees to notify City Life Cars promptly of accidents, theft, mechanical problems, or any change affecting the rental.\n\nThis electronic signature confirms the renter reviewed and accepted these terms.`;$('#agreementDate').value=new Date().toISOString().slice(0,10);clearCanvas();$('#agreementModal').classList.remove('hidden');};
 window.closeAgreementModal=()=>$('#agreementModal').classList.add('hidden');
-let canvas=$('#signaturePad'),ctx=canvas.getContext('2d'),drawing=false;function canvasPos(e){const r=canvas.getBoundingClientRect(),p=e.touches?e.touches[0]:e;return{x:(p.clientX-r.left)*(canvas.width/r.width),y:(p.clientY-r.top)*(canvas.height/r.height)}}function startDraw(e){drawing=true;const p=canvasPos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()}function moveDraw(e){if(!drawing)return;const p=canvasPos(e);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#111827';ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault()}function endDraw(){drawing=false}['mousedown','touchstart'].forEach(x=>canvas.addEventListener(x,startDraw,{passive:false}));['mousemove','touchmove'].forEach(x=>canvas.addEventListener(x,moveDraw,{passive:false}));['mouseup','mouseleave','touchend'].forEach(x=>canvas.addEventListener(x,endDraw));function clearCanvas(){ctx.clearRect(0,0,canvas.width,canvas.height)}$('#clearSignature').onclick=clearCanvas;
-$('#agreementForm').onsubmit=e=>{e.preventDefault();const r=data.rentals.find(x=>x.id==Number($('#agreementRental').value));data.agreements.push({id:Date.now(),rentalId:r.id,customer:r.customer,vehicle:r.vehicle,pickup:r.pickup,return:r.return,terms:$('#agreementTerms').value,initials:$('#agreementInitials').value,date:$('#agreementDate').value,signature:canvas.toDataURL('image/png')});save();closeAgreementModal()};
-window.printAgreement=id=>{const a=data.agreements.find(x=>x.id===id);const w=window.open('','_blank');w.document.write(`<html><head><title>Rental Agreement</title><style>body{font-family:Arial;max-width:800px;margin:40px auto;line-height:1.5}h1{color:#0b1f3a}.box{border:1px solid #ccc;padding:15px;margin:15px 0}img{max-width:420px;border-bottom:1px solid #333}</style></head><body><h1>City Life Cars</h1><h2>Rental Agreement</h2><div class="box"><b>Renter:</b> ${esc(a.customer)}<br><b>Vehicle:</b> ${esc(a.vehicle)}<br><b>Rental dates:</b> ${a.pickup} through ${a.return}<br><b>Date signed:</b> ${a.date}</div><p style="white-space:pre-wrap">${esc(a.terms)}</p><p><b>Renter initials:</b> ${esc(a.initials)}</p><p><b>Electronic signature:</b></p><img src="${a.signature}"><script>setTimeout(()=>window.print(),250)<\/script></body></html>`);w.document.close()};
 
-window.openDocModal=id=>{$('#docCustomerId').value=id;$('#docModal').classList.remove('hidden')};window.closeDocModal=()=>$('#docModal').classList.add('hidden');
-async function smallFileData(file){if(!file)return null;if(file.size>2_500_000)throw new Error('For this local demo, keep each file under 2.5 MB.');return await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res({name:file.name,type:file.type,data:fr.result});fr.onerror=rej;fr.readAsDataURL(file)})}
-$('#docForm').onsubmit=async e=>{e.preventDefault();try{const c=data.customers.find(x=>x.id==Number($('#docCustomerId').value));const lf=$('#licenseFile').files[0],inf=$('#insuranceFile').files[0];if(lf)c.docs.license=await smallFileData(lf);if(inf)c.docs.insurance=await smallFileData(inf);save();e.target.reset();closeDocModal()}catch(err){alert(err.message)}};
+let canvas,ctx,drawing=false;
+function setupSignaturePad(){canvas=$('#signaturePad');ctx=canvas.getContext('2d');const pos=e=>{const r=canvas.getBoundingClientRect(),p=e.touches?e.touches[0]:e;return{x:(p.clientX-r.left)*(canvas.width/r.width),y:(p.clientY-r.top)*(canvas.height/r.height)}};const start=e=>{drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()};const move=e=>{if(!drawing)return;const p=pos(e);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#111827';ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault()};['mousedown','touchstart'].forEach(x=>canvas.addEventListener(x,start,{passive:false}));['mousemove','touchmove'].forEach(x=>canvas.addEventListener(x,move,{passive:false}));['mouseup','mouseleave','touchend'].forEach(x=>canvas.addEventListener(x,()=>drawing=false));}
+function clearCanvas(){ctx?.clearRect(0,0,canvas.width,canvas.height);}
+async function canvasBlob(){return await new Promise(res=>canvas.toBlob(res,'image/png'));}
+async function saveAgreement(e){e.preventDefault();try{const rentalId=$('#agreementRental').value;const blob=await canvasBlob();if(!blob)throw new Error('Please add the renter signature.');const path=`${rentalId}/${Date.now()}-signature.png`;const up=await supabase.storage.from('signatures').upload(path,blob,{contentType:'image/png',upsert:false});if(up.error)throw up.error;const insert=await supabase.from('rental_agreements').insert({rental_id:rentalId,agreement_version:'CLC-2026-1',terms:$('#agreementTerms').value,renter_initials:$('#agreementInitials').value,signed_at:new Date($('#agreementDate').value+'T12:00:00').toISOString(),customer_signature_path:path});if(insert.error)throw insert.error;closeAgreementModal();e.target.reset();await loadAll();}catch(err){showError(err,'Could not save agreement: ');}}
+window.viewSignature=async path=>{if(!path)return alert('No signature file.');const {data:signed,error}=await supabase.storage.from('signatures').createSignedUrl(path,120);if(error)return showError(error);window.open(signed.signedUrl,'_blank','noopener');};
 
-window.openInspectionModal=()=>{if(!data.rentals.length){alert('Create a rental first.');return}$('#inspectionRental').innerHTML=data.rentals.map(r=>`<option value="${r.id}">${esc(r.customer)} — ${esc(r.vehicle)}</option>`).join('');$('#inspectionModal').classList.remove('hidden')};window.closeInspectionModal=()=>$('#inspectionModal').classList.add('hidden');
-async function compressImage(file){return await new Promise((res,rej)=>{const img=new Image(),fr=new FileReader();fr.onload=()=>img.src=fr.result;fr.onerror=rej;img.onload=()=>{const max=900,scale=Math.min(1,max/img.width),c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.68))};fr.readAsDataURL(file)})}
-$('#inspectionForm').onsubmit=async e=>{e.preventDefault();const r=data.rentals.find(x=>x.id==Number($('#inspectionRental').value));const files=[...$('#inspectionPhotos').files].slice(0,6),photos=[];for(const f of files){if(f.type.startsWith('image/'))photos.push(await compressImage(f))}data.inspections.push({id:Date.now(),rentalId:r.id,customer:r.customer,vehicle:r.vehicle,type:$('#inspectionType').value,mileage:Number($('#inspectionMileage').value),fuel:$('#inspectionFuel').value,notes:$('#inspectionNotes').value,date:new Date().toISOString(),photos});save();e.target.reset();closeInspectionModal()};
-function renderInspections(){$('#inspectionCards').innerHTML=data.inspections.length?data.inspections.map(i=>`<article class="maintenance-card"><h3>${esc(i.vehicle)}</h3><p>${i.type} • ${Number(i.mileage).toLocaleString()} miles • Fuel: ${esc(i.fuel)}</p><p>${esc(i.notes||'No damage notes')}</p>${i.photos?.length?`<div class="photo-grid">${i.photos.map(p=>`<img src="${p}" alt="Inspection photo">`).join('')}</div>`:''}</article>`).join(''):'<p class="muted">No inspections recorded.</p>'}
+window.openDocModal=id=>{$('#docCustomerId').value=id;$('#docModal').classList.remove('hidden');}; window.closeDocModal=()=>$('#docModal').classList.add('hidden');
+function safeExt(file){const fromName=(file.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');return fromName||'bin';}
+async function uploadCustomerDoc(customerId,type,file){if(!file)return;const path=`${customerId}/${type}-${Date.now()}.${safeExt(file)}`;const up=await supabase.storage.from('customer-documents').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:false});if(up.error)throw up.error;const rec=await supabase.from('customer_documents').insert({customer_id:customerId,document_type:type,storage_path:path});if(rec.error)throw rec.error;}
+async function saveDocuments(e){e.preventDefault();try{const id=$('#docCustomerId').value,lf=$('#licenseFile').files[0],ins=$('#insuranceFile').files[0];if(!lf&&!ins)throw new Error('Choose at least one document.');if(lf)await uploadCustomerDoc(id,'drivers_license',lf);if(ins)await uploadCustomerDoc(id,'insurance',ins);e.target.reset();closeDocModal();await loadAll();}catch(err){showError(err,'Upload failed: ');}}
 
-function reminderInfo(r){const due=new Date(r.return+'T17:00:00'),now=new Date(),hrs=Math.round((due-now)/3600000);if(r.status==='Completed')return null;if(hrs<0)return{label:'OVERDUE',text:`Return was due ${Math.abs(hrs)} hour(s) ago.`,urgent:true};if(hrs<=Number(data.settings.reminderHours||24))return{label:'DUE SOON',text:`Return due in about ${hrs} hour(s).`,urgent:false};return{label:'SCHEDULED',text:`Reminder window begins ${Math.max(0,hrs-Number(data.settings.reminderHours||24))} hour(s) from now.`,urgent:false}}
-function renderReminders(){const list=data.rentals.map(r=>[r,reminderInfo(r)]).filter(x=>x[1]);$('#reminderList').innerHTML=list.length?list.map(([r,i])=>`<article class="customer-card reminder-card"><strong>${esc(r.customer)} — ${esc(r.vehicle)}</strong><p>${esc(r.return)} • ${i.text}</p>${badge(i.label==='OVERDUE'?'Overdue':'Service')}</article>`).join(''):'<p class="muted">No reminders needed.</p>'}
-$('#notificationBtn').onclick=async()=>{if(!('Notification'in window)){alert('This browser does not support notifications.');return}const p=await Notification.requestPermission();if(p==='granted'){new Notification('City Life Cars',{body:'Browser return alerts are enabled while this system is being used.'})}};
+window.openInspectionModal=()=>{if(!data.rentals.length)return alert('Create a rental first.');$('#inspectionRental').innerHTML=data.rentals.map(r=>`<option value="${r.id}">${esc(rentalCustomer(r))} — ${esc(rentalVehicle(r))}</option>`).join('');$('#inspectionModal').classList.remove('hidden');};window.closeInspectionModal=()=>$('#inspectionModal').classList.add('hidden');
+async function saveInspection(e){e.preventDefault();try{const rentalId=$('#inspectionRental').value,paths=[];for(const [i,file] of [...$('#inspectionPhotos').files].slice(0,8).entries()){const path=`${rentalId}/${Date.now()}-${i}.${safeExt(file)}`;const up=await supabase.storage.from('inspection-photos').upload(path,file,{contentType:file.type||'image/jpeg',upsert:false});if(up.error)throw up.error;paths.push(path);}const q=await supabase.from('vehicle_inspections').insert({rental_id:rentalId,inspection_type:$('#inspectionType').value,mileage:Number($('#inspectionMileage').value),fuel_level:$('#inspectionFuel').value,damage_notes:$('#inspectionNotes').value,photo_paths:paths,inspected_by:currentUser.id});if(q.error)throw q.error;e.target.reset();closeInspectionModal();await loadAll();}catch(err){showError(err,'Could not save inspection: ');}}
+function renderInspections(){$('#inspectionCards').innerHTML=data.inspections.map(i=>`<article class="maintenance-card"><h3>${esc(vehicleName(i.rentals?.vehicles))}</h3><p>${esc(i.inspection_type)} • ${Number(i.mileage||0).toLocaleString()} miles • Fuel: ${esc(i.fuel_level||'—')}</p><p>${esc(i.damage_notes||'No damage notes')}</p>${i.photo_paths?.length?`<button class="outline-btn" onclick="openInspectionPhoto('${i.photo_paths[0]}')">View Photo (${i.photo_paths.length})</button>`:''}</article>`).join('')||'<p class="muted">No inspections recorded.</p>';}
+window.openInspectionPhoto=async path=>{const {data:signed,error}=await supabase.storage.from('inspection-photos').createSignedUrl(path,120);if(error)return showError(error);window.open(signed.signedUrl,'_blank','noopener');};
 
-function renderSettings(){$('#defaultLateFee').value=data.settings.defaultLateFee??35;$('#paymentLink').value=data.settings.paymentLink||'';$('#reminderHours').value=data.settings.reminderHours??24}
-$('#settingsForm').onsubmit=e=>{e.preventDefault();data.settings.defaultLateFee=Number($('#defaultLateFee').value);data.settings.paymentLink=$('#paymentLink').value.trim();data.settings.reminderHours=Number($('#reminderHours').value);save();alert('Settings saved.')};
-$('#paymentLinkBtn').onclick=()=>{if(!data.settings.paymentLink){switchView('settings');alert('Add your Stripe or Square hosted payment link first.');return}window.open(data.settings.paymentLink,'_blank','noopener')};
-$('#backupBtn').onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`city-life-cars-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-$('#restoreInput').onchange=e=>{const file=e.target.files[0];if(!file)return;const fr=new FileReader();fr.onload=()=>{try{const restored=JSON.parse(fr.result);if(!restored.vehicles||!restored.rentals)throw new Error();data=restored;save();alert('Backup restored.')}catch{alert('That file is not a valid City Life Cars backup.')}};fr.readAsText(file)};
-$('#resetBtn').onclick=()=>{if(confirm('Reset all local demo records?')){data=structuredClone(seed);save()}};
-$('#exportBtn').onclick=()=>{const rows=[['Year','Make','Model','Plate','Mileage','Daily Rate','Status','Revenue','GPS'],...data.vehicles.map(v=>[v.year,v.make,v.model,v.plate,v.mileage,v.rate,v.status,v.revenue,v.gps||''])];const csv=rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='city-life-cars-fleet-report.csv';a.click()};
-renderAll();
+function reminderInfo(r){const due=new Date(r.due_at),hrs=Math.round((due-new Date())/3600000);if(['completed','cancelled'].includes(r.status))return null;if(hrs<0)return{label:'OVERDUE',text:`Return was due about ${Math.abs(hrs)} hour(s) ago.`};if(hrs<=Number(settings.reminderHours||24))return{label:'DUE SOON',text:`Return due in about ${hrs} hour(s).`};return{label:'SCHEDULED',text:`Reminder window begins in about ${Math.max(0,hrs-Number(settings.reminderHours||24))} hour(s).`};}
+function renderReminders(){const list=data.rentals.map(r=>[r,reminderInfo(r)]).filter(x=>x[1]);$('#reminderList').innerHTML=list.map(([r,i])=>`<article class="customer-card reminder-card"><strong>${esc(rentalCustomer(r))} — ${esc(rentalVehicle(r))}</strong><p>${dateOnly(r.due_at)} • ${esc(i.text)}</p>${badge(i.label==='OVERDUE'?'Overdue':'Service')}</article>`).join('')||'<p class="muted">No reminders needed.</p>';}
+function renderSettings(){$('#defaultLateFee').value=settings.defaultLateFee??35;$('#paymentLink').value=settings.paymentLink||'';$('#reminderHours').value=settings.reminderHours??24;$('#roleLabel').textContent=currentProfile?.role?.replace('_',' ')||'—';}
+function exportFleet(){const rows=[['Year','Make','Model','VIN','Plate','Mileage','Daily Rate','Status','GPS'],...data.vehicles.map(v=>[v.year,v.make,v.model,v.vin,v.license_plate,v.mileage,v.daily_rate,v.status,v.gps_url||''])];const csv=rows.map(r=>r.map(x=>`"${String(x??'').replaceAll('"','""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`city-life-rental-fleet-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+
+init();
