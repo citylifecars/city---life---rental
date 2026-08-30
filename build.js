@@ -1,24 +1,40 @@
+
 const fs = require("fs");
 const path = require("path");
 
 const root = __dirname;
 const dist = path.join(root, "dist");
 
-if (!fs.existsSync(dist)) {
-  fs.mkdirSync(dist, { recursive: true });
-}
+fs.rmSync(dist, { recursive: true, force: true });
+fs.mkdirSync(dist, { recursive: true });
 
-const files = [
-  "index.html",
-  "app.js",
-  "styles.css"
-];
-
-for (const file of files) {
+for (const file of ["index.html", "app.js", "styles.css"]) {
   fs.copyFileSync(
     path.join(root, file),
     path.join(dist, file)
   );
 }
 
-console.log("City Life Rental build complete.");
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "";
+
+fs.writeFileSync(
+  path.join(dist, "config.js"),
+  `window.CLC_CONFIG=${JSON.stringify({
+    supabaseUrl: supabaseUrl,
+    supabasePublishableKey: supabaseKey
+  })};\n`
+);
+
+console.log(
+  "City Life Rental build complete.",
+  "Supabase URL configured:",
+  Boolean(supabaseUrl),
+  "Publishable key configured:",
+  Boolean(supabaseKey)
+);
