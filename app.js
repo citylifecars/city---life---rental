@@ -91,6 +91,7 @@ function showLogin(){
 }
 
 function applyRoleUi(){
+ $$('.owner-only').forEach(x=>x.hidden=currentProfile?.role!=='owner');
   const allowed=roleAccess[currentProfile.role]||[];
   $$('.nav-link').forEach(b=>b.hidden=!allowed.includes(b.dataset.view));
   $$('.action-fleet-add').forEach(x=>x.hidden=!can('owner','manager'));
