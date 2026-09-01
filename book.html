@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1f3a" />
+  <title>Book a Rental | City Life Cars</title>
+  <link rel="stylesheet" href="booking.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/book.html" aria-label="City Life Cars home">
+      <span class="brand-mark">CLC</span>
+      <span><strong>City Life Cars</strong><small>Simple. Local. Ready.</small></span>
+    </a>
+    <nav><a href="#fleet">Fleet</a><a href="#how">How it works</a><a href="#requirements">Requirements</a><a class="nav-cta" href="#reserve">Request a Rental</a></nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">City Life Cars</p>
+        <h1>Find your ride. Request your rental online.</h1>
+        <p class="hero-text">Browse available vehicles, choose your dates, and submit your reservation request in minutes. A City Life team member will review your request before payment and final confirmation.</p>
+        <div class="hero-actions"><a class="primary" href="#fleet">Browse Cars</a><a class="secondary" href="#reserve">Request a Rental</a></div>
+        <div class="trust-row"><span>✓ Secure request form</span><span>✓ Real fleet availability</span><span>✓ Staff approval before payment</span></div>
+      </div>
+      <div class="hero-card">
+        <p class="eyebrow light">Quick quote</p>
+        <h2>Choose dates to estimate your rental.</h2>
+        <label>Pickup date<input id="heroPickup" type="date" /></label>
+        <label>Return date<input id="heroReturn" type="date" /></label>
+        <button id="heroFind" class="light-btn">See available cars</button>
+      </div>
+    </section>
+
+    <section id="fleet" class="section">
+      <div class="section-head"><div><p class="eyebrow">Available fleet</p><h2>Choose a vehicle</h2><p>Rates shown are estimates. Taxes, fees, deposit, insurance requirements, and final approval may affect the final total.</p></div><div id="fleetStatus" class="status-pill">Loading fleet…</div></div>
+      <div id="fleetGrid" class="fleet-grid"></div>
+    </section>
+
+    <section id="how" class="section alt">
+      <div class="section-head"><div><p class="eyebrow">How it works</p><h2>From request to pickup</h2></div></div>
+      <div class="steps">
+        <article><span>1</span><h3>Choose your car</h3><p>Select an available vehicle and the dates you need it.</p></article>
+        <article><span>2</span><h3>Submit your information</h3><p>Send your contact and driver information securely for review.</p></article>
+        <article><span>3</span><h3>Get approved</h3><p>City Life Cars reviews availability and renter requirements.</p></article>
+        <article><span>4</span><h3>Pay & pick up</h3><p>Once approved, you receive the payment and pickup instructions.</p></article>
+      </div>
+    </section>
+
+    <section id="requirements" class="section">
+      <div class="requirements-card">
+        <div><p class="eyebrow">Before you request</p><h2>Rental requirements</h2><p>Final requirements are confirmed by City Life Cars before the reservation is approved.</p></div>
+        <ul><li>Valid driver’s license</li><li>Valid payment method</li><li>Accurate contact information</li><li>Insurance documentation when required</li><li>Agreement to rental terms before pickup</li></ul>
+      </div>
+    </section>
+
+    <section id="reserve" class="section reserve-section">
+      <div class="reserve-copy"><p class="eyebrow">Reservation request</p><h2>Tell us what you need.</h2><p>This is a request, not a completed rental. Your vehicle is not guaranteed until City Life Cars approves the request and confirms payment.</p><div id="quoteCard" class="quote-card"><strong>Your estimate</strong><p>Select a vehicle and dates to see an estimated total.</p></div></div>
+      <form id="bookingForm" class="booking-form">
+        <div class="form-grid">
+          <label>First name<input name="first_name" autocomplete="given-name" required /></label>
+          <label>Last name<input name="last_name" autocomplete="family-name" required /></label>
+          <label>Email<input name="email" type="email" autocomplete="email" required /></label>
+          <label>Phone<input name="phone" type="tel" autocomplete="tel" required /></label>
+          <label>Pickup date<input id="pickupDate" name="pickup_date" type="date" required /></label>
+          <label>Return date<input id="returnDate" name="return_date" type="date" required /></label>
+          <label class="full">Vehicle<select id="vehicleSelect" name="vehicle_id" required><option value="">Choose a vehicle</option></select></label>
+          <label>Driver’s license state<input name="license_state" maxlength="2" placeholder="GA" required /></label>
+          <label>Preferred contact<select name="preferred_contact"><option value="text">Text message</option><option value="phone">Phone call</option><option value="email">Email</option></select></label>
+          <label class="full">Notes or special request<textarea name="notes" rows="4" placeholder="Tell us anything we should know about your rental request."></textarea></label>
+          <label class="check full"><input name="confirm_accuracy" type="checkbox" required /><span>I confirm the information above is accurate and understand this is a reservation request subject to availability and approval.</span></label>
+        </div>
+        <button id="submitBooking" class="primary submit-btn" type="submit">Submit Reservation Request</button>
+        <p id="formMessage" class="form-message" role="status"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer><div><strong>City Life Cars</strong><p>Rental booking made simple.</p></div><a href="/">Employee Login</a></footer>
+
+  <script src="config.js"></script>
+  <script type="module" src="booking.js"></script>
+</body>
+</html>
