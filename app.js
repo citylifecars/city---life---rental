@@ -7,12 +7,12 @@ const settings = JSON.parse(localStorage.getItem('clcCloudSettings') || 'null') 
 let supabase = null;
 let currentUser = null;
 let currentProfile = null;
-let data = { vehicles: [], customers: [], rentals: [], payments: [], maintenance: [], agreements: [], inspections: [], documents: [] };
+let data = { vehicles: [], bookings: [], customers: [], rentals: [], payments: [], maintenance: [], agreements: [], inspections: [], documents: [] };
 
 const roleAccess = {
-  owner: ['dashboard','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
-  manager: ['dashboard','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
-  rental_agent: ['dashboard','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','settings'],
+  owner: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
+  manager: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
+  rental_agent: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','settings'],
   maintenance: ['dashboard','fleet','rentals','inspections','maintenance','settings']
 };
 
@@ -109,8 +109,9 @@ function switchView(id){
 }
 
 async function loadAll(){
-  const [vehicles,customers,rentals,payments,maintenance,agreements,inspections,documents] = await Promise.all([
+  const [vehicles,bookings,customers,rentals,payments,maintenance,agreements,inspections,documents] = await Promise.all([
     supabase.from('vehicles').select('*').order('created_at',{ascending:false}),
+    can('owner','manager','rental_agent') ? supabase.from('booking_requests').select('*, vehicles(id,year,make,model)').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
     can('owner','manager','rental_agent') ? supabase.from('customers').select('*').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
     supabase.from('rentals').select('*, customers(id,first_name,last_name), vehicles(id,year,make,model)').order('pickup_at',{ascending:false}),
     can('owner','manager','rental_agent') ? supabase.from('payments').select('*, rentals(id,customers(first_name,last_name))').order('paid_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
@@ -119,9 +120,9 @@ async function loadAll(){
     supabase.from('vehicle_inspections').select('*, rentals(id,customers(first_name,last_name),vehicles(year,make,model))').order('created_at',{ascending:false}),
     can('owner','manager','rental_agent') ? supabase.from('customer_documents').select('*').order('uploaded_at',{ascending:false}) : Promise.resolve({data:[],error:null})
   ]);
-  const results=[vehicles,customers,rentals,payments,maintenance,agreements,inspections,documents];
+  const results=[vehicles,bookings,customers,rentals,payments,maintenance,agreements,inspections,documents];
   const failed=results.find(r=>r.error); if(failed?.error){showError(failed.error,'Could not load cloud data: ');return;}
-  data={vehicles:vehicles.data||[],customers:customers.data||[],rentals:rentals.data||[],payments:payments.data||[],maintenance:maintenance.data||[],agreements:agreements.data||[],inspections:inspections.data||[],documents:documents.data||[]};
+  data={vehicles:vehicles.data||[],bookings:bookings.data||[],customers:customers.data||[],rentals:rentals.data||[],payments:payments.data||[],maintenance:maintenance.data||[],agreements:agreements.data||[],inspections:inspections.data||[],documents:documents.data||[]};
   await updateOverdueStatuses();
   renderAll();
 }
@@ -149,8 +150,66 @@ function renderAll(){
   $('#fleetStatus').innerHTML=['available','rented','maintenance'].map(s=>`<div class="status-row"><span>${uiVehicleStatus(s)}</span><strong>${data.vehicles.filter(v=>v.status===s).length}</strong></div>`).join('');
   $('#fleetTable').innerHTML=data.vehicles.map(v=>`<tr><td><strong>${esc(vehicleName(v))}</strong></td><td>${esc(v.license_plate||'—')}</td><td>${Number(v.mileage||0).toLocaleString()}</td><td>${money(v.daily_rate)}</td><td>${v.gps_url?`<a href="${esc(v.gps_url)}" target="_blank" rel="noopener">Open GPS</a>`:'—'}</td><td>${badge(uiVehicleStatus(v.status))}</td></tr>`).join('');
   $('#rentalsTable').innerHTML=data.rentals.map(r=>`<tr class="${r.status==='overdue'?'overdue-row':''}"><td><strong>${esc(rentalCustomer(r))}</strong></td><td>${esc(rentalVehicle(r))}</td><td>${dateOnly(r.pickup_at)}</td><td>${dateOnly(r.due_at)}</td><td>${money(lateFee(r))}</td><td>${money(Number(r.balance_due||0)+lateFee(r))}</td><td>${badge(uiRentalStatus(r.status))}</td></tr>`).join('');
-  renderCustomers(); renderPayments(); renderMaintenance(); renderAgreements(); renderInspections(); renderReminders(); renderReports(); renderSettings();
+  renderBookingRequests(); renderCustomers(); renderPayments(); renderMaintenance(); renderAgreements(); renderInspections(); renderReminders(); renderReports(); renderSettings();
 }
+
+function bookingConfirmation(b){return String(b?.id||'').replaceAll('-','').slice(0,8).toUpperCase() || '—';}
+function bookingStatusLabel(s){return ({pending:'Pending',approved:'Approved',declined:'Declined',cancelled:'Cancelled',converted:'Converted'})[s] || s || 'Pending';}
+function bookingEstimate(b){
+  if(!b?.pickup_date || !b?.return_date) return 0;
+  const start=new Date(`${b.pickup_date}T12:00:00`), end=new Date(`${b.return_date}T12:00:00`);
+  const days=Math.max(1,Math.round((end-start)/86400000));
+  return days*Number(b.estimated_daily_rate||0)+Number(b.estimated_deposit||0);
+}
+function renderBookingRequests(){
+  if(!can('owner','manager','rental_agent')) return;
+  const pending=data.bookings.filter(b=>b.status==='pending').length;
+  const approved=data.bookings.filter(b=>b.status==='approved').length;
+  const declined=data.bookings.filter(b=>b.status==='declined').length;
+  const navCount=$('#bookingNavCount'); if(navCount){navCount.textContent=pending?pending:''; navCount.hidden=!pending;}
+  $('#bookingStats').innerHTML=[
+    [pending,'Pending Review'],[approved,'Approved'],[declined,'Declined'],[data.bookings.length,'Total Requests']
+  ].map(x=>`<div class="stat-card"><small>${x[1]}</small><strong>${x[0]}</strong></div>`).join('');
+
+  $('#bookingRequestsTable').innerHTML=data.bookings.map(b=>{
+    const contact=[b.phone,b.email].filter(Boolean).map(esc).join('<br>');
+    const action=b.status==='pending'
+      ? `<div class="booking-actions"><button class="approve-btn" onclick="reviewBooking('${b.id}','approved')">Approve</button><button class="danger-btn" onclick="reviewBooking('${b.id}','declined')">Decline</button></div>`
+      : `<button class="outline-btn" onclick="reviewBooking('${b.id}','pending')">Return to Pending</button>`;
+    return `<tr>
+      <td><strong>${esc(b.first_name)} ${esc(b.last_name)}</strong><div class="muted">#${bookingConfirmation(b)} • ${esc(b.preferred_contact||'text')}</div></td>
+      <td>${contact}</td>
+      <td><strong>${esc(vehicleName(b.vehicles))}</strong><div class="muted">${dateOnly(b.pickup_date)} → ${dateOnly(b.return_date)}</div></td>
+      <td>${money(bookingEstimate(b))}<div class="muted">Rate ${money(b.estimated_daily_rate)}/day${Number(b.estimated_deposit||0)?` • Deposit ${money(b.estimated_deposit)}`:''}</div></td>
+      <td>${esc(b.license_state||'—')}<div class="muted booking-note">${esc(b.notes||'No notes')}</div></td>
+      <td>${badge(bookingStatusLabel(b.status))}<div class="muted">${b.reviewed_at?`Reviewed ${dateOnly(b.reviewed_at)}`:`Received ${dateOnly(b.created_at)}`}</div></td>
+      <td>${action}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" class="muted">No customer booking requests yet.</td></tr>';
+}
+
+window.reviewBooking=async(id,status)=>{
+  if(!can('owner','manager','rental_agent')) return;
+  const booking=data.bookings.find(b=>b.id===id); if(!booking) return;
+  const label=bookingStatusLabel(status);
+  if(status==='approved' && !confirm(`Approve ${booking.first_name} ${booking.last_name}'s request for ${vehicleName(booking.vehicles)}?`)) return;
+  let staffNotes=booking.staff_notes||null;
+  if(status==='declined'){
+    const reason=prompt('Optional: enter a reason or staff note for this decline.',staffNotes||'');
+    if(reason===null) return;
+    staffNotes=reason.trim()||null;
+  }
+  const patch=status==='pending'
+    ? {status:'pending',staff_notes:staffNotes,reviewed_by:null,reviewed_at:null}
+    : {status,staff_notes:staffNotes,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString()};
+  const {error}=await supabase.from('booking_requests').update(patch).eq('id',id);
+  if(error){showError(error,'Could not update booking request: ');return;}
+  booking.status=status; booking.staff_notes=staffNotes; booking.reviewed_by=patch.reviewed_by; booking.reviewed_at=patch.reviewed_at;
+  renderBookingRequests();
+  if(status==='approved') alert(`Booking #${bookingConfirmation(booking)} approved. Stripe payment is the next step.`);
+  else if(status==='declined') alert(`Booking #${bookingConfirmation(booking)} declined.`);
+  else alert(`Booking #${bookingConfirmation(booking)} returned to Pending.`);
+};
 
 function renderCustomers(){
   if(!can('owner','manager','rental_agent')){$('#customerCards').innerHTML='<p class="muted">Your role does not include customer records.</p>';return;}

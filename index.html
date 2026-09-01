@@ -30,6 +30,7 @@
       <div class="sidebar-brand"><div class="logo-mark small">CLC</div><div><strong>City Life Cars</strong><small>Rental Manager</small></div></div>
       <nav id="nav">
         <button class="nav-link active" data-view="dashboard">Dashboard</button>
+        <button class="nav-link" data-view="bookings">Booking Requests <span id="bookingNavCount" class="nav-count"></span></button>
         <button class="nav-link" data-view="fleet">Fleet</button>
         <button class="nav-link" data-view="rentals">Rentals</button>
         <button class="nav-link" data-view="agreements">Agreements</button>
@@ -53,6 +54,8 @@
         <div class="stats-grid" id="statsGrid"></div>
         <div class="grid-two"><div class="panel"><div class="panel-head"><h3>Vehicles due back</h3><button class="text-btn" data-jump="rentals">View rentals</button></div><div id="dueList"></div></div><div class="panel"><div class="panel-head"><h3>Fleet status</h3><button class="text-btn" data-jump="fleet">Manage fleet</button></div><div id="fleetStatus"></div></div></div>
       </section>
+
+      <section id="bookings" class="view"><div class="section-head"><div><h2>Booking Requests</h2><p>Review customer requests from the public booking page before payment and final confirmation.</p></div><a class="outline-btn" href="/book" target="_blank" rel="noopener">Open Customer Booking Page</a></div><div id="bookingStats" class="stats-grid"></div><div class="notice"><strong>Approval workflow:</strong> Approving a request records the staff review. It does not charge the customer yet. Stripe payment will be connected next.</div><div class="panel table-wrap"><table><thead><tr><th>Customer</th><th>Contact</th><th>Vehicle / Dates</th><th>Estimate</th><th>License / Notes</th><th>Status</th><th>Actions</th></tr></thead><tbody id="bookingRequestsTable"></tbody></table></div></section>
 
       <section id="fleet" class="view"><div class="section-head"><div><h2>Fleet</h2><p>Track vehicle status, mileage, daily rate, and GPS links.</p></div><button class="primary-btn action-fleet-add" onclick="openModal('vehicle')">+ Add Vehicle</button></div><div class="panel table-wrap"><table><thead><tr><th>Vehicle</th><th>Plate</th><th>Mileage</th><th>Daily Rate</th><th>GPS</th><th>Status</th></tr></thead><tbody id="fleetTable"></tbody></table></div></section>
 
