@@ -111,7 +111,9 @@ function switchView(id){
 async function loadAll(){
   const [vehicles,bookings,customers,rentals,payments,maintenance,agreements,inspections,documents] = await Promise.all([
     supabase.from('vehicles').select('*').order('created_at',{ascending:false}),
-    can('owner','manager','rental_agent') ? supabase.from('booking_requests').select('*, vehicles(id,year,make,model)').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
+    can('owner','manager','rental_agent')
+  ? supabase.from('booking_requests').select('*').order('created_at',{ascending:false})
+  : Promise.resolve({data:[],error:null}),
     can('owner','manager','rental_agent') ? supabase.from('customers').select('*').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
     supabase.from('rentals').select('*, customers(id,first_name,last_name), vehicles(id,year,make,model)').order('pickup_at',{ascending:false}),
     can('owner','manager','rental_agent') ? supabase.from('payments').select('*, rentals(id,customers(first_name,last_name))').order('paid_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
@@ -123,7 +125,10 @@ async function loadAll(){
   const results=[vehicles,bookings,customers,rentals,payments,maintenance,agreements,inspections,documents];
   const failed=results.find(r=>r.error); if(failed?.error){showError(failed.error,'Could not load cloud data: ');return;}
   data={vehicles:vehicles.data||[],bookings:bookings.data||[],customers:customers.data||[],rentals:rentals.data||[],payments:payments.data||[],maintenance:maintenance.data||[],agreements:agreements.data||[],inspections:inspections.data||[],documents:documents.data||[]};
-  await updateOverdueStatuses();
+  data.bookings.forEach(b => {
+  b.vehicles = data.vehicles.find(v => v.id === b.vehicle_id) || null;
+});
+ await updateOverdueStatuses();
   renderAll();
 }
 
