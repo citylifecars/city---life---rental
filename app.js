@@ -1,4 +1,4 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -7,10 +7,10 @@ const settings = JSON.parse(localStorage.getItem('clcCloudSettings') || 'null') 
 let supabase = null;
 let currentUser = null;
 let currentProfile = null;
-let data = { vehicles: [], bookings: [], customers: [], rentals: [], payments: [], maintenance: [], agreements: [], inspections: [], documents: [] };
+let data = { vehicles: [], bookings: [], customers: [], rentals: [], payments: [], maintenance: [], agreements: [], inspections: [], documents: [], employeeProfiles: [] };
 
 const roleAccess = {
-  owner: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
+  owner: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','employees','settings'],
   manager: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
   rental_agent: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','settings'],
   maintenance: ['dashboard','fleet','rentals','inspections','maintenance','settings']
