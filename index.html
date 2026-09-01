@@ -76,6 +76,30 @@
       <section id="reports" class="view"><div class="section-head"><div><h2>Reports</h2><p>Review revenue, balances, and fleet utilization.</p></div><button id="exportBtn" class="primary-btn">Export Fleet CSV</button></div><div class="stats-grid" id="reportStats"></div><div class="grid-two"><div class="panel"><h3>Revenue by vehicle</h3><div id="revenueBars" class="bars"></div></div><div class="panel"><h3>Business checklist</h3><ul class="checklist"><li>Review overdue rentals daily</li><li>Verify insurance before every pickup</li><li>Photograph vehicles at checkout and return</li><li>Reconcile deposits and balances weekly</li><li>Confirm backups are healthy</li></ul></div></div></section>
 
       <section id="settings" class="view"><div class="section-head"><div><h2>Settings</h2><p>Local browser preferences and integration status.</p></div></div><div class="grid-two"><form id="settingsForm" class="panel settings-form"><h3>Business settings</h3><label>Default late fee / day<input id="defaultLateFee" type="number" min="0" step="1"></label><label>Hosted payment link<input id="paymentLink" type="url" placeholder="https://..."></label><label>Reminder hours before return<input id="reminderHours" type="number" min="1" step="1"></label><button class="primary-btn" type="submit">Save Settings</button></form><div class="panel"><h3>Cloud status</h3><div class="integration-list"><div><strong>Supabase authentication</strong><span>Connected</span></div><div><strong>Cloud database</strong><span>Connected</span></div><div><strong>Private document storage</strong><span>Connected after SQL upgrade</span></div><div><strong>Hosted card payments</strong><span>Link-based</span></div><div><strong>SMS/email reminders</strong><span>Not connected</span></div><div><strong>Automatic backups</strong><span>Supabase plan dependent</span></div></div><hr><p class="muted">Employee role: <strong id="roleLabel">—</strong></p></div></div></section>
+   <section id="employees" class="view">
+  <div class="section-head">
+    <div>
+      <h2>Employee Management</h2>
+      <p>Owner-only employee access, roles, and account management.</p>
+    </div>
+    <button class="primary-btn owner-only" onclick="openAddEmployeeModal()">+ Add Employee</button>
+  </div>
+
+  <div id="employeeManagement" class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="employeesTable"></tbody>
+    </table>
+  </div>
+</section>
     </main>
   </div>
 
@@ -86,7 +110,43 @@
   <div id="inspectionModal" class="modal hidden"><div class="modal-card"><button class="close-btn" onclick="closeInspectionModal()">×</button><h2>Vehicle Inspection</h2><form id="inspectionForm" class="form-grid"><label>Rental<select id="inspectionRental" required></select></label><label>Inspection type<select id="inspectionType"><option value="checkout">Checkout</option><option value="return">Return</option></select></label><label>Mileage<input id="inspectionMileage" type="number" required></label><label>Fuel level<select id="inspectionFuel"><option>Full</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Empty</option></select></label><label class="full">Condition / damage notes<textarea id="inspectionNotes" rows="4"></textarea></label><label class="full">Inspection photos<input id="inspectionPhotos" type="file" accept="image/*" multiple></label><p class="demo-note full">Photos upload to the private Supabase inspection bucket.</p><button class="primary-btn" type="submit">Save Inspection</button></form></div></div>
 
   <div id="docModal" class="modal hidden"><div class="modal-card"><button class="close-btn" onclick="closeDocModal()">×</button><h2>Customer Documents</h2><form id="docForm" class="form-grid"><input id="docCustomerId" type="hidden"><label class="full">Driver's license image/PDF<input id="licenseFile" type="file" accept="image/*,application/pdf"></label><label class="full">Insurance image/PDF<input id="insuranceFile" type="file" accept="image/*,application/pdf"></label><p class="demo-note full">Files are stored in a private Supabase bucket and protected by employee RLS policies.</p><button class="primary-btn" type="submit">Upload Documents</button></form></div></div>
+<div id="addEmployeeModal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>
+        <div class="eyebrow">OWNER ONLY</div>
+        <h3>Add Employee</h3>
+      </div>
+      <button class="icon-btn" type="button" onclick="closeAddEmployeeModal()">×</button>
+    </div>
 
+    <form id="addEmployeeForm" class="form-grid">
+      <label class="full">
+        Full Name
+        <input name="full_name" required />
+      </label>
+
+      <label class="full">
+        Email
+        <input name="email" type="email" required />
+      </label>
+
+      <label class="full">
+        Role
+        <select name="role" required>
+          <option value="rental_agent">Rental Agent</option>
+          <option value="manager">Manager</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+      </label>
+
+      <div class="full modal-actions">
+        <button type="button" class="outline-btn" onclick="closeAddEmployeeModal()">Cancel</button>
+        <button type="submit" class="primary-btn">Create Employee</button>
+      </div>
+    </form>
+  </div>
+</div>
   <script src="config.js"></script>
   <script type="module" src="app.js"></script>
 </body>
