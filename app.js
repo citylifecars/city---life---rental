@@ -90,8 +90,20 @@ function showLogin(){
   $('#password').value='';
 }
 
-function applyRoleUi($$('.owner-only').forEach(x=>x.hidden=currentProfile?.role!=='owner');){
- 
+function applyRoleUi(){
+  const allowed=roleAccess[currentProfile.role]||[];
+
+  $$('.nav-link').forEach(b=>b.hidden=!allowed.includes(b.dataset.view));
+
+  $$('.action-fleet-add').forEach(x=>x.hidden=!can('owner','manager'));
+  $$('.action-rental').forEach(x=>x.hidden=!can('owner','manager','rental_agent'));
+  $$('.action-customer').forEach(x=>x.hidden=!can('owner','manager','rental_agent'));
+  $$('.action-payment').forEach(x=>x.hidden=!can('owner','manager','rental_agent'));
+  $$('.action-inspection').forEach(x=>x.hidden=!can('owner','manager','rental_agent','maintenance'));
+  $$('.action-maintenance').forEach(x=>x.hidden=!can('owner','manager','maintenance'));
+
+  $$('.owner-only').forEach(x=>x.hidden=currentProfile?.role!=='owner');
+} 
   const allowed=roleAccess[currentProfile.role]||[];
   $$('.nav-link').forEach(b=>b.hidden=!allowed.includes(b.dataset.view));
   $$('.action-fleet-add').forEach(x=>x.hidden=!can('owner','manager'));
