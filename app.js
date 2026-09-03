@@ -114,26 +114,97 @@ function switchView(id){
 }
 
 async function loadAll(){
-  const [vehicles,bookings,customers,rentals,payments,maintenance,agreements,inspections,documents] = await Promise.all([
+  const [
+    vehicles,
+    bookings,
+    customers,
+    rentals,
+    payments,
+    maintenance,
+    agreements,
+    inspections,
+    documents,
+    employeeProfiles
+  ] = await Promise.all([
     supabase.from('vehicles').select('*').order('created_at',{ascending:false}),
+
     can('owner','manager','rental_agent')
-  ? supabase.from('booking_requests').select('*').order('created_at',{ascending:false})
-  : Promise.resolve({data:[],error:null}),
-    can('owner','manager','rental_agent') ? supabase.from('customers').select('*').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
-    supabase.from('rentals').select('*, customers(id,first_name,last_name), vehicles(id,year,make,model)').order('pickup_at',{ascending:false}),
-    can('owner','manager','rental_agent') ? supabase.from('payments').select('*, rentals(id,customers(first_name,last_name))').order('paid_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
-    supabase.from('maintenance_records').select('*, vehicles(id,year,make,model)').order('service_date',{ascending:false}),
-    can('owner','manager','rental_agent') ? supabase.from('rental_agreements').select('*, rentals(id,customers(first_name,last_name),vehicles(year,make,model),pickup_at,due_at)').order('created_at',{ascending:false}) : Promise.resolve({data:[],error:null}),
-    supabase.from('vehicle_inspections').select('*, rentals(id,customers(first_name,last_name),vehicles(year,make,model))').order('created_at',{ascending:false}),
-    can('owner','manager','rental_agent') ? supabase.from('customer_documents').select('*').order('uploaded_at',{ascending:false}) : Promise.resolve({data:[],error:null})
+      ? supabase.from('booking_requests').select('*').order('created_at',{ascending:false})
+      : Promise.resolve({data:[],error:null}),
+
+    can('owner','manager','rental_agent')
+      ? supabase.from('customers').select('*').order('created_at',{ascending:false})
+      : Promise.resolve({data:[],error:null}),
+
+    supabase
+      .from('rentals')
+      .select('*, customers(id,first_name,last_name), vehicles(id,year,make,model)')
+      .order('pickup_at',{ascending:false}),
+
+    can('owner','manager','rental_agent')
+      ? supabase.from('payments').select('*, rentals(id,customers(first_name,last_name))').order('paid_at',{ascending:false})
+      : Promise.resolve({data:[],error:null}),
+
+    supabase
+      .from('maintenance_records')
+      .select('*, vehicles(id,year,make,model)')
+      .order('service_date',{ascending:false}),
+
+    can('owner','manager','rental_agent')
+      ? supabase.from('rental_agreements').select('*, rentals(id,customers(first_name,last_name),vehicles(year,make,model))').order('created_at',{ascending:false})
+      : Promise.resolve({data:[],error:null}),
+
+    supabase
+      .from('vehicle_inspections')
+      .select('*, rentals(id,customers(first_name,last_name),vehicles(year,make,model))')
+      .order('created_at',{ascending:false}),
+
+    can('owner','manager','rental_agent')
+      ? supabase.from('customer_documents').select('*').order('uploaded_at',{ascending:false})
+      : Promise.resolve({data:[],error:null}),
+
+    can('owner')
+      ? supabase.from('employee_profiles').select('id,full_name,phone,role,active').order('full_name',{ascending:true})
+      : Promise.resolve({data:[],error:null})
   ]);
-  const results=[vehicles,bookings,customers,rentals,payments,maintenance,agreements,inspections,documents];
-  const failed=results.find(r=>r.error); if(failed?.error){showError(failed.error,'Could not load cloud data: ');return;}
-  data={vehicles:vehicles.data||[],bookings:bookings.data||[],customers:customers.data||[],rentals:rentals.data||[],payments:payments.data||[],maintenance:maintenance.data||[],agreements:agreements.data||[],inspections:inspections.data||[],documents:documents.data||[]};
+
+  const results = [
+    vehicles,
+    bookings,
+    customers,
+    rentals,
+    payments,
+    maintenance,
+    agreements,
+    inspections,
+    documents,
+    employeeProfiles
+  ];
+
+  const failed = results.find(r => r.error);
+  if(failed?.error){
+    showError(failed.error,'Could not load cloud data: ');
+    return;
+  }
+
+  data = {
+    vehicles: vehicles.data || [],
+    bookings: bookings.data || [],
+    customers: customers.data || [],
+    rentals: rentals.data || [],
+    payments: payments.data || [],
+    maintenance: maintenance.data || [],
+    agreements: agreements.data || [],
+    inspections: inspections.data || [],
+    documents: documents.data || [],
+    employeeProfiles: employeeProfiles.data || []
+  };
+
   data.bookings.forEach(b => {
-  b.vehicles = data.vehicles.find(v => v.id === b.vehicle_id) || null;
-});
- await updateOverdueStatuses();
+    b.vehicles = data.vehicles.find(v => v.id === b.vehicle_id) || null;
+  });
+
+  await updateOverdueStatuses();
   renderAll();
 }
 
