@@ -55,21 +55,9 @@ if (String(ownerProfile.role).toLowerCase() !== 'owner') {
 if (ownerProfile.active !== true) {
   return res.status(403).json({ error: 'Owner account is inactive' });
 }
-      .from('employee_profiles')
-      .select('role, active')
-      .eq('id', userData.user.id)
-      .single();
+const { fullName, email, password, role } = req.body || {};     
 
-    if (
-      ownerError ||
-      !ownerProfile ||
-      ownerProfile.role !== 'owner' ||
-      !ownerProfile.active
-    ) {
-      return res.status(403).json({ error: 'Owner access required' });
-    }
-
-    const { fullName, email, password, role } = req.body || {};
+    
 
     const allowedRoles = ['manager', 'rental_agent', 'maintenance'];
 
