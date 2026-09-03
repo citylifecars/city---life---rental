@@ -390,3 +390,67 @@ function renderSettings(){$('#defaultLateFee').value=settings.defaultLateFee??35
 function exportFleet(){const rows=[['Year','Make','Model','VIN','Plate','Mileage','Daily Rate','Status','GPS'],...data.vehicles.map(v=>[v.year,v.make,v.model,v.vin,v.license_plate,v.mileage,v.daily_rate,v.status,v.gps_url||''])];const csv=rows.map(r=>r.map(x=>`"${String(x??'').replaceAll('"','""')}"`).join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`city-life-rental-fleet-${new Date().toISOString().slice(0,10)}.csv`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 
 init();
+window.openAddEmployeeModal = async () => {
+  if (!currentProfile || currentProfile.role !== 'owner') {
+    return alert('Owner access required.');
+  }
+
+  const fullName = prompt('Employee full name:');
+  if (!fullName) return;
+
+  const email = prompt('Employee email address:');
+  if (!email) return;
+
+  const password = prompt('Temporary password (at least 8 characters):');
+  if (!password) return;
+
+  if (password.length < 8) {
+    return alert('Temporary password must be at least 8 characters.');
+  }
+
+  const role = prompt(
+    'Employee role: manager, rental_agent, or maintenance',
+    'rental_agent'
+  );
+
+  if (!['manager', 'rental_agent', 'maintenance'].includes(role)) {
+    return alert('Please enter manager, rental_agent, or maintenance.');
+  }
+
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+
+    if (!token) {
+      return alert('Your login session has expired. Please sign in again.');
+    }
+
+    const response = await fetch('/api/create-employee', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        fullName,
+        email,
+        password,
+        role
+      })
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Unable to create employee.');
+    }
+
+    alert(`${fullName} was added successfully.`);
+    await loadAll();
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message || 'Unable to create employee.');
+  }
+};
+inin();
