@@ -231,9 +231,29 @@ function renderAll(){
   $('#fleetStatus').innerHTML=['available','rented','maintenance'].map(s=>`<div class="status-row"><span>${uiVehicleStatus(s)}</span><strong>${data.vehicles.filter(v=>v.status===s).length}</strong></div>`).join('');
   $('#fleetTable').innerHTML=data.vehicles.map(v=>`<tr><td><strong>${esc(vehicleName(v))}</strong></td><td>${esc(v.license_plate||'—')}</td><td>${Number(v.mileage||0).toLocaleString()}</td><td>${money(v.daily_rate)}</td><td>${v.gps_url?`<a href="${esc(v.gps_url)}" target="_blank" rel="noopener">Open GPS</a>`:'—'}</td><td>${badge(uiVehicleStatus(v.status))}</td></tr>`).join('');
   $('#rentalsTable').innerHTML=data.rentals.map(r=>`<tr class="${r.status==='overdue'?'overdue-row':''}"><td><strong>${esc(rentalCustomer(r))}</strong></td><td>${esc(rentalVehicle(r))}</td><td>${dateOnly(r.pickup_at)}</td><td>${dateOnly(r.due_at)}</td><td>${money(lateFee(r))}</td><td>${money(Number(r.balance_due||0)+lateFee(r))}</td><td>${badge(uiRentalStatus(r.status))}</td></tr>`).join('');
-  renderBookingRequests(); renderCustomers(); renderPayments(); renderMaintenance(); renderAgreements(); renderInspections(); renderReminders(); renderReports(); renderSettings();
+  renderBookingRequests(); renderCustomers(); renderPayments(); renderMaintenance(); renderAgreements(); renderInspections(); renderReminders(); renderReports(); renderSettings(); renderEmployees();
 }
+function renderEmployees(){
+  const tbody = $('#employeesTable');
+  if(!tbody) return;
 
+  if(!can('owner')){
+    tbody.innerHTML = '';
+    return;
+  }
+
+  const employees = data.employeeProfiles || [];
+
+  tbody.innerHTML = employees.map(p => `
+    <tr>
+      <td><strong>${esc(p.full_name || 'Employee')}</strong></td>
+      <td>${esc(p.id === currentUser?.id ? (currentUser.email || '—') : '—')}</td>
+      <td>${esc((p.role || '').replaceAll('_',' '))}</td>
+      <td>${badge(p.active ? 'Active' : 'Inactive')}</td>
+      <td>${p.id === currentUser?.id ? 'Owner Account' : '—'}</td>
+    </tr>
+  `).join('');
+}
 function bookingConfirmation(b){return String(b?.id||'').replaceAll('-','').slice(0,8).toUpperCase() || '—';}
 function bookingStatusLabel(s){return ({pending:'Pending',approved:'Approved',declined:'Declined',cancelled:'Cancelled',converted:'Converted'})[s] || s || 'Pending';}
 function bookingEstimate(b){
