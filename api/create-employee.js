@@ -32,6 +32,29 @@ export default async function handler(req, res) {
 
     // Verify that person is an active owner
     const { data: ownerProfile, error: ownerError } = await admin
+  .from('employee_profiles')
+  .select('id, role, active')
+  .eq('id', userData.user.id)
+  .maybeSingle();
+
+if (ownerError) {
+  console.error('Owner profile lookup error:', ownerError);
+  return res.status(500).json({ error: ownerError.message });
+}
+
+if (!ownerProfile) {
+  return res.status(403).json({ error: 'Owner profile not found' });
+}
+
+if (String(ownerProfile.role).toLowerCase() !== 'owner') {
+  return res.status(403).json({
+    error: `Owner access required. Current role: ${ownerProfile.role}`
+  });
+}
+
+if (ownerProfile.active !== true) {
+  return res.status(403).json({ error: 'Owner account is inactive' });
+}
       .from('employee_profiles')
       .select('role, active')
       .eq('id', userData.user.id)
