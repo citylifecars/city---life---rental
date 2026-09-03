@@ -352,7 +352,66 @@ window.reviewBooking=async(id,status)=>{
   else if(status==='declined') alert(`Booking #${bookingConfirmation(booking)} declined.`);
   else alert(`Booking #${bookingConfirmation(booking)} returned to Pending.`);
 };
+window.editVehicle = async function(id){
+  const vehicle = data.vehicles.find(v => v.id === id);
+  if(!vehicle){
+    alert('Vehicle not found.');
+    return;
+  }
 
+  const dailyRate = prompt(
+    'Daily rate:',
+    String(vehicle.daily_rate ?? '')
+  );
+  if(dailyRate === null) return;
+
+  const depositAmount = prompt(
+    'Deposit amount:',
+    String(vehicle.deposit_amount ?? '')
+  );
+  if(depositAmount === null) return;
+
+  const mileage = prompt(
+    'Mileage:',
+    String(vehicle.mileage ?? 0)
+  );
+  if(mileage === null) return;
+
+  const status = prompt(
+    'Status: available, reserved, rented, maintenance',
+    String(vehicle.status ?? 'available')
+  );
+  if(status === null) return;
+
+  const gpsUrl = prompt(
+    'GPS link:',
+    String(vehicle.gps_url ?? '')
+  );
+  if(gpsUrl === null) return;
+
+  const patch = {
+    daily_rate: Number(dailyRate || 0),
+    deposit_amount: Number(depositAmount || 0),
+    mileage: Number(mileage || 0),
+    status: status.trim().toLowerCase(),
+    gps_url: gpsUrl.trim() || null
+  };
+
+  const { error } = await supabase
+    .from('vehicles')
+    .update(patch)
+    .eq('id', id);
+
+  if(error){
+    showError(error, 'Could not update vehicle.');
+    return;
+  }
+
+  Object.assign(vehicle, patch);
+  renderAll();
+
+  alert(`${vehicleName(vehicle)} updated successfully.`);
+};
 function renderCustomers(){
   if(!can('owner','manager','rental_agent')){$('#customerCards').innerHTML='<p class="muted">Your role does not include customer records.</p>';return;}
   $('#customerCards').innerHTML=data.customers.map(c=>{const docs=data.documents.filter(d=>d.customer_id===c.id);const hasL=docs.some(d=>d.document_type==='drivers_license'),hasI=docs.some(d=>d.document_type==='insurance');return `<article class="customer-card"><h3>${esc(fullName(c))}</h3><p>${esc(c.phone||'')}</p><p>${esc(c.email||'')}</p><p>${esc(maskLicense(c.drivers_license_number))}</p><div class="doc-status"><span class="mini-pill">License: ${hasL?'✓':'Missing'}</span><span class="mini-pill">Insurance: ${hasI?'✓':'Missing'}</span></div><button class="outline-btn" onclick="openDocModal('${c.id}')">Documents</button></article>`;}).join('')||'<p class="muted">No customers yet.</p>';
