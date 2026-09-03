@@ -307,7 +307,48 @@ window.reviewBooking=async(id,status)=>{
   if(error){showError(error,'Could not update booking request: ');return;}
   booking.status=status; booking.staff_notes=staffNotes; booking.reviewed_by=patch.reviewed_by; booking.reviewed_at=patch.reviewed_at;
   renderBookingRequests();
-  if(status==='approved') alert(`Booking #${bookingConfirmation(booking)} approved. Stripe payment is the next step.`);
+  if(status==='approved'){
+  try{
+    const depositAmount =
+      Number(booking.estimated_deposit || booking.vehicles?.deposit_amount || 0);
+
+    if(!depositAmount || depositAmount <= 0){
+      alert(`Booking #${bookingConfirmation(booking)} approved, but no deposit amount is set for this vehicle.`);
+      return;
+    }
+
+    const response = await fetch('/api/create-checkout-session',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        bookingRequestId: booking.id,
+        customerName: `${booking.first_name || ''} ${booking.last_name || ''}`.trim(),
+        customerEmail: booking.email || '',
+        vehicleName: vehicleName(booking.vehicles),
+        depositAmount
+      })
+    });
+
+    const result = await response.json();
+
+    if(!response.ok || !result.url){
+      throw new Error(result.error || 'Unable to create Stripe payment link');
+    }
+
+    window.open(result.url,'_blank');
+
+    alert(
+      `Booking #${bookingConfirmation(booking)} approved. Stripe deposit checkout opened in a new tab.`
+    );
+  }catch(err){
+    console.error(err);
+    alert(
+      `Booking approved, but the Stripe deposit link could not be created: ${err.message}`
+    );
+  }
+}
   else if(status==='declined') alert(`Booking #${bookingConfirmation(booking)} declined.`);
   else alert(`Booking #${bookingConfirmation(booking)} returned to Pending.`);
 };
