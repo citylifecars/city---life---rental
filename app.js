@@ -453,4 +453,4 @@ window.openAddEmployeeModal = async () => {
     alert(error.message || 'Unable to create employee.');
   }
 };
-inin();
+init();
