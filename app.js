@@ -313,8 +313,8 @@ window.reviewBooking=async(id,status)=>{
   renderBookingRequests();
   if(status==='approved'){
   try{
-    const depositAmount =
-      Number(booking.estimated_deposit || booking.vehicles?.deposit_amount || 0);
+    const depositAmount = 200;
+      
 
     if(!depositAmount || depositAmount <= 0){
       alert(`Booking #${bookingConfirmation(booking)} approved, but no deposit amount is set for this vehicle.`);
