@@ -209,7 +209,6 @@ async function loadAll(){
 }
 
 async function updateOverdueStatuses(){
-  if(!can('owner','manager','rental_agent')) return;
   const now=Date.now(); const overdue=data.rentals.filter(r=>['reserved','active'].includes(r.status) && new Date(r.due_at).getTime()<now);
   if(!overdue.length)return;
   await Promise.all(overdue.map(r=>supabase.from('rentals').update({status:'overdue'}).eq('id',r.id)));
