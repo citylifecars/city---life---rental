@@ -275,7 +275,7 @@ function renderBookingRequests(){
     const contact=[b.phone,b.email].filter(Boolean).map(esc).join('<br>');
     const action=b.status==='pending'
       ? `<div class="booking-actions"><button class="approve-btn" onclick="reviewBooking('${b.id}','approved')">Approve</button><button class="danger-btn" onclick="reviewBooking('${b.id}','declined')">Decline</button></div>`
-      : `<button class="outline-btn" onclick="reviewBooking('${b.id}','pending')">Return to Pending</button>`;
+      : `<div class="booking-actions"><button class="outline-btn" onclick="reviewBooking('${b.id}','pending')">Return to Pending</button><button class="approve-btn" onclick="generateAgreement('${b.id}')">Generate Agreement</button></div>`;
     return `<tr>
       <td><strong>${esc(b.first_name)} ${esc(b.last_name)}</strong><div class="muted">#${bookingConfirmation(b)} • ${esc(b.preferred_contact||'text')}</div></td>
       <td>${contact}</td>
@@ -551,5 +551,91 @@ window.openAddEmployeeModal = async () => {
     console.error(error);
     alert(error.message || 'Unable to create employee.');
   }
+};
+window.generateAgreement = function(id) {
+  const booking = data.bookings.find(b => b.id === id);
+
+  if (!booking) {
+    alert('Booking not found.');
+    return;
+  }
+
+  const customerName = `${booking.first_name || ''} ${booking.last_name || ''}`.trim();
+  const vehicle = vehicleName(booking.vehicles);
+  const pickup = dateOnly(booking.pickup_date);
+  const returnDate = dateOnly(booking.return_date);
+  const dailyRate = money(booking.estimated_daily_rate || 0);
+  const deposit = money(booking.estimated_deposit || 0);
+
+  const agreement = `
+CITY LIFE CARS
+RENTAL AGREEMENT
+
+RENTER
+Name: ${customerName}
+Email: ${booking.email || '—'}
+Phone: ${booking.phone || '—'}
+Driver License State: ${booking.license_state || '—'}
+
+VEHICLE
+Vehicle: ${vehicle}
+
+RENTAL PERIOD
+Pickup Date: ${pickup}
+Return Date: ${returnDate}
+
+CHARGES
+Daily Rate: ${dailyRate}
+Deposit: ${deposit}
+
+RENTER AGREEMENT
+
+I acknowledge that I am responsible for the rental vehicle during the rental period. I agree to return the vehicle on the agreed return date and in substantially the same condition in which it was received, ordinary wear excepted.
+
+I understand that additional charges may apply for late return, fuel, damage, cleaning, tolls, tickets, towing, or other charges allowed under the final rental agreement.
+
+Customer Signature: ______________________________
+
+Date: __________________
+
+CITY LIFE CARS
+`;
+
+  const agreementWindow = window.open('', '_blank');
+
+  agreementWindow.document.write(`
+    <html>
+      <head>
+        <title>Rental Agreement - ${customerName}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 30px;
+            line-height: 1.6;
+          }
+          pre {
+            white-space: pre-wrap;
+            font-family: Arial, sans-serif;
+          }
+          button {
+            padding: 12px 20px;
+            font-size: 16px;
+            margin-bottom: 25px;
+          }
+          @media print {
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <button onclick="window.print()">Print / Save PDF</button>
+        <pre>${esc(agreement)}</pre>
+      </body>
+    </html>
+  `);
+
+  agreementWindow.document.close();
 };
 init();
