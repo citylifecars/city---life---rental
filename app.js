@@ -124,7 +124,7 @@ async function loadAll(){
     agreements,
     inspections,
     documents,
-    employeeProfiles
+    employeeProfiles,rentalSignatures
   ] = await Promise.all([
     supabase.from('vehicles').select('*').order('created_at',{ascending:false}),
 
@@ -166,7 +166,10 @@ async function loadAll(){
     can('owner')
       ? supabase.from('employee_profiles').select('id,full_name,phone,role,active').order('full_name',{ascending:true})
       : Promise.resolve({data:[],error:null})
-  ]);
+  ,
+can('owner','manager','rental_agent')
+  ? supabase.from('rental_signatures').select('*').order('signed_at',{ascending:false})
+  : Promise.resolve({data:[],error:null})]);
 
   const results = [
     vehicles,
@@ -178,7 +181,8 @@ async function loadAll(){
     agreements,
     inspections,
     documents,
-    employeeProfiles
+    employeeProfiles,
+    rentalSignatures
   ];
 
   const failed = results.find(r => r.error);
@@ -197,7 +201,8 @@ async function loadAll(){
     agreements: agreements.data || [],
     inspections: inspections.data || [],
     documents: documents.data || [],
-    employeeProfiles: employeeProfiles.data || []
+    employeeProfiles: employeeProfiles.data || [],
+rentalSignatures: rentalSignatures.data || []
   };
 
   data.bookings.forEach(b => {
