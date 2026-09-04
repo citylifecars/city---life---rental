@@ -696,7 +696,25 @@ const status = document.getElementById('signatureStatus');
 
 let drawing = false;
 let hasSignature = false;
+if (existingSignature?.signature_data) {
+  const savedSignatureImage = new Image();
 
+  savedSignatureImage.onload = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(savedSignatureImage, 0, 0, canvas.width, canvas.height);
+
+    hasSignature = true;
+    agreeBox.checked = true;
+
+    clearBtn.disabled = true;
+    submitBtn.disabled = true;
+    agreeBox.disabled = true;
+
+    status.textContent = 'Signed agreement loaded from file.';
+  };
+
+  savedSignatureImage.src = existingSignature.signature_data;
+}
 function getPoint(e) {
   const rect = canvas.getBoundingClientRect();
   return {
