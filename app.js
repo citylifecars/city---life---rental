@@ -583,7 +583,11 @@ window.generateAgreement = function(id) {
   const pickup = dateOnly(booking.pickup_date);
   const returnDate = dateOnly(booking.return_date);
   const dailyRate = money(booking.estimated_daily_rate || 0);
-  const deposit = money(booking.estimated_deposit || 0);
+ const existingSignature = data.rentalSignatures.find(
+  s => String(s.booking_id) === String(booking.id)
+) || null;
+ 
+ const deposit = money(booking.estimated_deposit || 0);
 
   const agreement = `
 CITY LIFE CARS
@@ -613,6 +617,7 @@ I acknowledge that I am responsible for the rental vehicle during the rental per
 I understand that additional charges may apply for late return, fuel, damage, cleaning, tolls, tickets, towing, or other charges allowed under the final rental agreement.
 
 Customer Signature: ______________________________
+${existingSignature?.signature_data ? `[SIGNED ELECTRONICALLY — signature on file]` : ''}
 
 Date: __________________
 
