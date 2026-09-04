@@ -630,9 +630,103 @@ CITY LIFE CARS
         </style>
       </head>
       <body>
-        <button onclick="window.print()">Print / Save PDF</button>
-        <pre>${esc(agreement)}</pre>
-      </body>
+  <button onclick="window.print()">Print / Save PDF</button>
+
+  <pre>${esc(agreement)}</pre>
+
+  <hr style="margin:40px 0;">
+
+  <h2>Electronic Signature</h2>
+
+  <p>
+    By signing below, I confirm that I have reviewed and agree
+    to the rental agreement above.
+  </p>
+
+  <label>
+    <input type="checkbox" id="agreeBox">
+    I agree to the rental terms.
+  </label>
+
+  <br><br>
+
+  <canvas
+    id="signaturePad"
+    width="650"
+    height="180"
+    style="border:2px solid #333; width:100%; max-width:650px; touch-action:none;">
+  </canvas>
+
+  <br><br>
+
+  <button type="button" id="clearSignature">Clear Signature</button>
+  <button type="button" id="submitSignature">Sign & Submit</button>
+
+  <p id="signatureStatus"></p>
+ <script>
+const canvas = document.getElementById('signaturePad');
+const ctx = canvas.getContext('2d');
+const agreeBox = document.getElementById('agreeBox');
+const clearBtn = document.getElementById('clearSignature');
+const submitBtn = document.getElementById('submitSignature');
+const status = document.getElementById('signatureStatus');
+
+let drawing = false;
+let hasSignature = false;
+
+function getPoint(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+canvas.addEventListener('pointerdown', e => {
+  drawing = true;
+  hasSignature = true;
+  const p = getPoint(e);
+  ctx.beginPath();
+  ctx.moveTo(p.x, p.y);
+  canvas.setPointerCapture(e.pointerId);
+});
+
+canvas.addEventListener('pointermove', e => {
+  if (!drawing) return;
+  const p = getPoint(e);
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+});
+
+canvas.addEventListener('pointerup', () => drawing = false);
+canvas.addEventListener('pointercancel', () => drawing = false);
+
+clearBtn.addEventListener('click', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasSignature = false;
+  status.textContent = '';
+});
+
+submitBtn.addEventListener('click', () => {
+  if (!agreeBox.checked) {
+    alert('Please agree to the rental terms before signing.');
+    return;
+  }
+
+  if (!hasSignature) {
+    alert('Please sign inside the signature box.');
+    return;
+  }
+
+  status.textContent = 'Signature completed successfully.';
+  submitBtn.disabled = true;
+  clearBtn.disabled = true;
+  agreeBox.disabled = true;
+});
+</script> 
+</body>
     </html>
   `);
 
