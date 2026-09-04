@@ -712,9 +712,19 @@ if (existingSignature?.signature_data) {
 
     status.textContent = 'Signed agreement loaded from file.';
   };
+savedSignatureImage.onerror = () => {
+  hasSignature = false;
+  agreeBox.checked = false;
 
-  savedSignatureImage.src = existingSignature.signature_data;
-}
+  clearBtn.disabled = false;
+  submitBtn.disabled = false;
+  agreeBox.disabled = false;
+
+  status.textContent = 'Saved signature could not be loaded. Please sign again.';
+ };
+
+savedSignatureImage.src = existingSignature.signature_data;
+} 
 function getPoint(e) {
   const rect = canvas.getBoundingClientRect();
   return {
