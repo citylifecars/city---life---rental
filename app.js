@@ -552,6 +552,19 @@ window.openAddEmployeeModal = async () => {
     alert(error.message || 'Unable to create employee.');
   }
 };
+window.saveRentalSignature = async function(signatureRecord) {
+  const { error } = await supabase
+    .from('rental_signatures')
+    .insert(signatureRecord);
+
+  if (error) {
+    console.error('Signature save error:', error);
+    throw error;
+  }
+
+  return true;
+};
+
 window.generateAgreement = function(id) {
   const booking = data.bookings.find(b => b.id === id);
 
@@ -709,7 +722,7 @@ clearBtn.addEventListener('click', () => {
   status.textContent = '';
 });
 
-submitBtn.addEventListener('click', () => {
+submitBtn.addEventListener('click', async () => {
   if (!agreeBox.checked) {
     alert('Please agree to the rental terms before signing.');
     return;
@@ -720,10 +733,32 @@ submitBtn.addEventListener('click', () => {
     return;
   }
 
-  status.textContent = 'Signature completed successfully.';
-  submitBtn.disabled = true;
-  clearBtn.disabled = true;
-  agreeBox.disabled = true;
+  try {
+    status.textContent = 'Saving signed agreement...';
+    submitBtn.disabled = true;
+
+    const signatureRecord = {
+      booking_id: ${JSON.stringify(booking.id)},
+      customer_name: ${JSON.stringify(customerName)},
+      customer_email: ${JSON.stringify(booking.email || '')},
+      customer_phone: ${JSON.stringify(booking.phone || '')},
+      vehicle_name: ${JSON.stringify(vehicle)},
+      agreement_text: ${JSON.stringify(agreement)},
+      signature_data: canvas.toDataURL('image/png'),
+      agreed_to_terms: true,
+      status: 'signed'
+    };
+
+    await window.opener.saveRentalSignature(signatureRecord);
+
+    status.textContent = 'Signed agreement saved successfully.';
+    clearBtn.disabled = true;
+    agreeBox.disabled = true;
+  } catch (error) {
+    console.error(error);
+    status.textContent = 'Unable to save signature. Please try again.';
+    submitBtn.disabled = false;
+  }
 });
 </script> 
 </body>
