@@ -340,8 +340,8 @@ window.reviewBooking=async(id,status)=>{
     if(!response.ok || !result.url){
       throw new Error(result.error || 'Unable to create Stripe payment link');
     }
-
- prompt('Copy this Stripe payment link and send it to the customer:', result.url); 
+window.location.href = result.url;
+ 
 
     alert(
       `Booking #${bookingConfirmation(booking)} approved. Stripe deposit checkout opened in a new tab.`
