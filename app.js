@@ -285,7 +285,7 @@ function renderBookingRequests(){
       <td><strong>${esc(b.first_name)} ${esc(b.last_name)}</strong><div class="muted">#${bookingConfirmation(b)} • ${esc(b.preferred_contact||'text')}</div></td>
       <td>${contact}</td>
       <td><strong>${esc(vehicleName(b.vehicles))}</strong><div class="muted">${dateOnly(b.pickup_date)} → ${dateOnly(b.return_date)}</div></td>
-      <td>${money(bookingEstimate(b))}<div class="muted">Rate ${money(b.estimated_daily_rate)}/day${Number(b.estimated_deposit||0)?` • Deposit ${money(b.estimated_deposit)}`:''}</div></td>
+      <td>${money(bookingEstimate(b))}<div class="muted">Rate ${money(b.estimated_daily_rate)}/day${Number(b.estimated_deposit||0)?` • Deposit ${money(b.estimated_deposit)}`:''}${b.deposit_paid ? ` • Deposit Paid ${money(b.deposit_amount_paid)}` : ''}</div></td>
       <td>${esc(b.license_state||'—')}<div class="muted booking-note">${esc(b.notes||'No notes')}</div></td>
       <td>${badge(bookingStatusLabel(b.status))}<div class="muted">${b.reviewed_at?`Reviewed ${dateOnly(b.reviewed_at)}`:`Received ${dateOnly(b.created_at)}`}</div></td>
       <td>${action}</td>
