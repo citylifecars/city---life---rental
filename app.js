@@ -472,7 +472,64 @@ window.openAgreementModal=()=>{if(!data.rentals.length)return alert('Create a re
 window.closeAgreementModal=()=>$('#agreementModal').classList.add('hidden');
 
 let canvas,ctx,drawing=false;
-function setupSignaturePad(){canvas=$('#signaturePad');ctx=canvas.getContext('2d');const pos=e=>{const r=canvas.getBoundingClientRect(),p=e.touches?e.touches[0]:e;return{x:(p.clientX-r.left)*(canvas.width/r.width),y:(p.clientY-r.top)*(canvas.height/r.height)}};const start=e=>{drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()};const move=e=>{if(!drawing)return;const p=pos(e);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#111827';ctx.lineTo(p.x,p.y);ctx.stroke();e.preventDefault()};['mousedown','touchstart'].forEach(x=>canvas.addEventListener(x,start,{passive:false}));['mousemove','touchmove'].forEach(x=>canvas.addEventListener(x,move,{passive:false}));['mouseup','mouseleave','touchend'].forEach(x=>canvas.addEventListener(x,()=>drawing=false));}
+function setupSignaturePad(){
+  canvas = $('#signaturePad');
+  if (!canvas) return;
+
+  ctx = canvas.getContext('2d');
+
+  const resizeCanvas = () => {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+
+    canvas.width = rect.width * ratio;
+    canvas.height = rect.height * ratio;
+
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000';
+  };
+
+  resizeCanvas();
+
+  const pos = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    return {
+      x: p.clientX - r.left,
+      y: p.clientY - r.top
+    };
+  };
+
+  const start = (e) => {
+    drawing = true;
+    const p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    e.preventDefault();
+  };
+
+  const move = (e) => {
+    if (!drawing) return;
+    const p = pos(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    e.preventDefault();
+  };
+
+  const stop = () => {
+    drawing = false;
+  };
+
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', stop);
+
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  window.addEventListener('touchend', stop);
+}
 function clearCanvas(){ctx?.clearRect(0,0,canvas.width,canvas.height);}
 async function canvasBlob(){return await new Promise(res=>canvas.toBlob(res,'image/png'));}
 async function saveAgreement(e){e.preventDefault();try{const rentalId=$('#agreementRental').value;const blob=await canvasBlob();if(!blob)throw new Error('Please add the renter signature.');const path=`${rentalId}/${Date.now()}-signature.png`;const up=await supabase.storage.from('signatures').upload(path,blob,{contentType:'image/png',upsert:false});if(up.error)throw up.error;const insert=await supabase.from('rental_agreements').insert({rental_id:rentalId,agreement_version:'CLC-2026-1',terms:$('#agreementTerms').value,renter_initials:$('#agreementInitials').value,signed_at:new Date($('#agreementDate').value+'T12:00:00').toISOString(),customer_signature_path:path});if(insert.error)throw insert.error;closeAgreementModal();e.target.reset();await loadAll();}catch(err){showError(err,'Could not save agreement: ');}}
