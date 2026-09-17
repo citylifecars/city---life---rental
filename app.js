@@ -587,7 +587,7 @@ window.generateAgreement = function(id) {
   s => String(s.booking_id) === String(booking.id)
 ) || null;
  
- const deposit = money(booking.estimated_deposit || 0);
+ const deposit = money(booking.deposit_paid ? (booking.deposit_amount_paid || booking.estimated_deposit || 0) : (booking.estimated_deposit || 0));
 
   const agreement = `
 CITY LIFE CARS
