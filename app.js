@@ -469,6 +469,7 @@ function renderAgreements(){
   $('#agreementCards').innerHTML=data.agreements.map(a=>`<article class="customer-card"><h3>${esc(fullName(a.rentals?.customers))}</h3><p>${esc(vehicleName(a.rentals?.vehicles))}</p><p>Signed ${dateOnly(a.signed_at)}</p><p>Initials: ${esc(a.renter_initials||'—')}</p><div class="agreement-actions"><button class="outline-btn" onclick="viewSignature('${a.customer_signature_path||''}')">View Signature</button></div></article>`).join('')||'<p class="muted">No signed agreements yet.</p>';
 }
 window.openAgreementModal=()=>{if(!data.rentals.length)return alert('Create a rental first.');window.open('https://form.jotform.com/252498291069165','_blank');};
+
 window.closeAgreementModal=()=>$('#agreementModal').classList.add('hidden');
 
 let canvas,ctx,drawing=false;
