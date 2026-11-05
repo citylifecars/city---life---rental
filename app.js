@@ -10,9 +10,9 @@ let currentProfile = null;
 let data = { vehicles: [], bookings: [], customers: [], rentals: [], payments: [], maintenance: [], agreements: [], inspections: [], documents: [], employeeProfiles: [] };
 
 const roleAccess = {
-  owner: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','employees','settings'],
-  manager: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
-  rental_agent: ['dashboard','bookings','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','settings'],
+  owner: ['dashboard','bookings', 'extensions','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','employees','settings'],
+  manager: ['dashboard','bookings','extensions','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','reports','settings'],
+  rental_agent: ['dashboard','bookings', 'booking','fleet','rentals','agreements','customers','inspections','payments','reminders','maintenance','settings'],
   maintenance: ['dashboard','fleet','rentals','inspections','maintenance','settings']
 };
 
