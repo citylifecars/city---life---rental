@@ -249,6 +249,40 @@ function renderAll(){
 function renderExtensionRequests() {
   const requests = data.extensionRequests || [];
   console.log('Rental extension requests loaded:', requests.length);
+ 
+const table = $('#extensionRequestsTable');
+if (!table) return;
+
+if (requests.length === 0) {
+  table.innerHTML = '<p>No rental extension requests yet.</p>';
+  return;
+}
+
+table.innerHTML = `
+  <table>
+    <thead>
+      <tr>
+        <th>Rental ID</th>
+        <th>Days</th>
+        <th>New Return Date</th>
+        <th>Extension Amount</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${requests.map(r => `
+        <tr>
+          <td>${esc(r.rental_id)}</td>
+          <td>${Number(r.requested_days)}</td>
+          <td>${esc(dateOnly(r.requested_due_at))}</td>
+          <td>${money(r.extension_amount)}</td>
+          <td>${esc(r.status)}</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+`;
+
 }
 
 function renderEmployees(){
