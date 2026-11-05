@@ -124,7 +124,7 @@ async function loadAll(){
     agreements,
     inspections,
     documents,
-    employeeProfiles,rentalSignatures
+    employeeProfiles,rentalSignatures,extensionRequests
   ] = await Promise.all([
     supabase.from('vehicles').select('*').order('created_at',{ascending:false}),
 
@@ -169,7 +169,12 @@ async function loadAll(){
   ,
 can('owner','manager','rental_agent')
   ? supabase.from('rental_signatures').select('*').order('signed_at',{ascending:false})
-  : Promise.resolve({data:[],error:null})]);
+  : Promise.resolve({data:[],error:null}),
+
+can('owner', 'manager', 'rental_agent')
+  ? supabase.from('rental_extension_requests').select('*').order('created_at', {ascending:false})
+  : Promise.resolve({data:[],error:null})
+]);
 
   const results = [
     vehicles,
@@ -182,7 +187,8 @@ can('owner','manager','rental_agent')
     inspections,
     documents,
     employeeProfiles,
-    rentalSignatures
+    rentalSignatures,
+extensionRequests
   ];
 
   const failed = results.find(r => r.error);
@@ -201,9 +207,11 @@ can('owner','manager','rental_agent')
     agreements: agreements.data || [],
     inspections: inspections.data || [],
     documents: documents.data || [],
-    employeeProfiles: employeeProfiles.data || [],
-rentalSignatures: rentalSignatures.data || []
-  };
+    rentalSignatures: rentalSignatures.data || [],
+extensionRequests: extensionRequests.data || [],
+
+};
+ 
 
   data.bookings.forEach(b => {
     b.vehicles = data.vehicles.find(v => v.id === b.vehicle_id) || null;
@@ -235,8 +243,14 @@ function renderAll(){
   $('#fleetStatus').innerHTML=['available','rented','maintenance'].map(s=>`<div class="status-row"><span>${uiVehicleStatus(s)}</span><strong>${data.vehicles.filter(v=>v.status===s).length}</strong></div>`).join('');
   $('#fleetTable').innerHTML=data.vehicles.map(v=>`<tr><td><strong>${esc(vehicleName(v))}</strong></td><td>${esc(v.license_plate||'—')}</td><td>${Number(v.mileage||0).toLocaleString()}</td><td>${money(v.daily_rate)}</td><td>${v.gps_url?`<a href="${esc(v.gps_url)}" target="_blank" rel="noopener">Open GPS</a>`:'—'}</td><td>${badge(v.status||'available')} <button class="outline-btn" onclick="editVehicle('${v.id}')">Edit</button></td></tr>`).join('');
   $('#rentalsTable').innerHTML=data.rentals.map(r=>`<tr class="${r.status==='overdue'?'overdue-row':''}"><td><strong>${esc(rentalCustomer(r))}</strong></td><td>${esc(rentalVehicle(r))}</td><td>${dateOnly(r.pickup_at)}</td><td>${dateOnly(r.due_at)}</td><td>${money(Number(r.balance_due||0)+lateFee(r))}</td><td>${badge(uiRentalStatus(r.status))}</td></tr>`).join('');
-  renderBookingRequests(); renderCustomers(); renderPayments(); renderMaintenance(); renderAgreements(); renderInspections(); renderReminders(); renderReports(); renderSettings(); renderEmployees();
+  renderBookingRequests(); renderCustomers(); renderPayments(); renderMaintenance(); renderAgreements(); renderInspections(); renderReminders(); renderReports(); renderSettings(); renderEmployees();renderExtensionRequests();
 }
+
+function renderExtensionRequests() {
+  const requests = data.extensionRequests || [];
+  console.log('Rental extension requests loaded:', requests.length);
+}
+
 function renderEmployees(){
   const tbody = $('#employeesTable');
   if(!tbody) return;
