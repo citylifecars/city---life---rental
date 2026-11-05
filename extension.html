@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rental Extensions | City Life Cars</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f5f8;
+      color: #202638;
+    }
+
+    header {
+      background: #17243a;
+      color: white;
+      padding: 30px 20px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 30px;
+    }
+
+    header p {
+      color: #d7b66a;
+      font-size: 17px;
+    }
+
+    main {
+      max-width: 550px;
+      margin: 35px auto;
+      padding: 28px;
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 4px 20px #00000012;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      margin: 18px 0 7px;
+      font-weight: bold;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccd1da;
+      border-radius: 7px;
+      font-size: 16px;
+    }
+
+    textarea {
+      min-height: 90px;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 24px;
+      padding: 15px;
+      border: none;
+      border-radius: 8px;
+      background: #b89a54;
+      color: #17243a;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    .notice {
+      background: #f8f3e7;
+      border-left: 4px solid #b89a54;
+      padding: 14px;
+      line-height: 1.5;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #697386;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>City Life Cars</h1>
+    <p>Rental Extension Requests</p>
+  </header>
+
+  <main>
+    <h2>Need More Time With Your Rental?</h2>
+
+    <p>
+      Request additional rental days for review
+      by the City Life Cars team.
+    </p>
+
+    <div class="notice">
+      Our online extension request system is being
+      prepared. Submissions will become available
+      after secure verification and payment
+      processing are connected.
+    </div>
+
+    <form id="extensionForm">
+
+      <label for="rental">
+        Rental Agreement Number
+      </label>
+      <input
+        id="rental"
+        name="rental"
+        type="text"
+        disabled
+      >
+
+      <label for="name">
+        Customer Full Name
+      </label>
+      <input
+        id="name"
+        name="name"
+        type="text"
+        disabled
+      >
+
+      <label for="email">
+        Email Address
+      </label>
+      <input
+        id="email"
+        name="email"
+        type="email"
+        disabled
+      >
+
+      <label for="phone">
+        Phone Number
+      </label>
+      <input
+        id="phone"
+        name="phone"
+        type="tel"
+        disabled
+      >
+
+      <label for="days">
+        Additional Days Requested
+      </label>
+      <input
+        id="days"
+        name="days"
+        type="number"
+        min="1"
+        disabled
+      >
+
+      <label for="notes">
+        Additional Notes
+      </label>
+      <textarea
+        id="notes"
+        name="notes"
+        disabled
+      ></textarea>
+
+      <button type="button" disabled>
+        Request Extension - Coming Soon
+      </button>
+
+    </form>
+
+    <p>
+      <small>
+        All rental extensions require City Life Cars
+        approval. Additional rental charges and fees
+        may apply. Your return date does not change
+        until approval and confirmed payment.
+      </small>
+    </p>
+  </main>
+
+  <footer>
+    &copy; 2026 City Life Cars
+  </footer>
+
+</body>
+</html>
