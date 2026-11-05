@@ -280,7 +280,7 @@ function renderBookingRequests(){
     const contact=[b.phone,b.email].filter(Boolean).map(esc).join('<br>');
     const action=b.status==='pending'
       ? `<div class="booking-actions"><button class="approve-btn" onclick="reviewBooking('${b.id}','approved')">Approve</button><button class="danger-btn" onclick="reviewBooking('${b.id}','declined')">Decline</button></div>`
-      : `<div class="booking-actions"><button class="outline-btn" onclick="reviewBooking('${b.id}','pending')">Return to Pending</button><button class="approve-btn" onclick="generateAgreement('${b.id}')">Generate Agreement</button></div>`;
+      : `<div class="booking-actions"><button class="outline-btn" onclick="reviewBooking('${b.id}','pending')">Return to Pending</button><button class="approve-btn" onclick="window.open('https://form.jotform.com/252498291069165', '_blank')">Generate Agreement</button></div>`;
     return `<tr>
       <td><strong>${esc(b.first_name)} ${esc(b.last_name)}</strong><div class="muted">#${bookingConfirmation(b)} • ${esc(b.preferred_contact||'text')}</div></td>
       <td>${contact}</td>
